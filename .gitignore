@@ -1,0 +1,12 @@
+node_modules/
+.env
+db/*.db
+certs/
+*.log
+*.yml
+dist/
+tests/
+.vscode/
+.cursor/
+src/backend/services/marketplaceService.ts
+src/backend/services/collection-mappings.ts

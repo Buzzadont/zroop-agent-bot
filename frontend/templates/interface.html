@@ -1,0 +1,1882 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zroop Terminal</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/viem@1.19.1/dist/viem.min.js"></script>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            margin: 0;
+            padding: 20px;
+            background-color: #0a1a20;
+            color: #00ff99;
+        }
+    
+        .terminal {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+    
+        .terminal-output {
+            margin: 20px 0;
+            padding: 10px;
+            background-color: #0a1a20;
+            border: 1px solid #00ff99;
+            border-radius: 5px;
+            color: #00ff99;
+        }
+    
+        .input-form {
+            display: flex;
+            margin-top: 20px;
+        }
+    
+        .input-field {
+            flex-grow: 1;
+            padding: 10px;
+            background-color: #102830;
+            border: 1px solid #00ff99;
+            border-radius: 5px 0 0 5px;
+            color: #00ff99;
+            font-family: 'Courier New', monospace;
+        }
+    
+        .submit-button {
+            padding: 10px 15px;
+            background-color: #00ff99;
+            border: none;
+            border-radius: 0 5px 5px 0;
+            color: #0a1a20;
+            font-weight: bold;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+        }
+        
+        /* Styles for NFTs and collections */
+        .nft-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .nft-item {
+            border: 1px solid #00ff99;
+            border-radius: 8px;
+            overflow: hidden;
+            background-color: #102830;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+        }
+        
+        .nft-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0, 255, 153, 0.3);
+        }
+        
+        .nft-preview {
+            height: 150px;
+            width: 100%;
+            overflow: hidden;
+            position: relative;
+            background-color: #0a1a20;
+        }
+        
+        .nft-image-container {
+            height: 150px;
+            width: 100%;
+            overflow: hidden;
+            position: relative;
+            background-color: #0a1a20;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .nft-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center;
+        }
+        
+        .collection-info {
+            padding: 10px;
+            text-align: center;
+        }
+        
+        .collection-name {
+            font-size: 14px;
+            color: #00ff99;
+            font-weight: bold;
+            overflow: hidden;
+            /* Allow word wrapping and display up to 2 lines */
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            line-clamp: 2;
+            -webkit-box-orient: vertical;
+            line-height: 1.3;
+            height: 2.6em;
+            word-break: break-word;
+        }
+        
+        .floor-price {
+            font-size: 12px;
+            /* color: #00ccff; */ /* Default color for price text, label might differ */
+            margin-top: 5px;
+        }
+        
+        .best-offer {
+            font-size: 12px;
+            /* color: #00ccff; */ /* Default color for price text, label might differ */
+            margin-top: 2px;
+        }
+        
+        .price-container {
+            display: flex;
+            flex-direction: column;
+            margin-top: 5px;
+        }
+        
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 200px;
+            font-size: 18px;
+            color: #00ff99;
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 0.5; }
+            50% { opacity: 1; }
+            100% { opacity: 0.5; }
+        }
+        
+        .tab-content {
+            display: none;
+        }
+    
+        .prompt {
+            color: #00aa00;
+        }
+    
+        .button {
+            background: #006400;
+            color: #00ff00;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+        }
+    
+        .button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+    
+        .error {
+            color: #ff0000;
+            margin: 10px 0;
+        }
+    
+        .success {
+            color: #00ff00;
+            margin: 10px 0;
+        }
+        
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        @media (min-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+        
+        .panel {
+            border: 1px solid #00ff00;
+            border-radius: 5px;
+            padding: 15px;
+            background-color: #1e2a38;
+        }
+        
+        .panel h2 {
+            margin-top: 0;
+            color: #00ff00;
+            font-size: 18px;
+            border-bottom: 1px solid #00aa00;
+            padding-bottom: 10px;
+        }
+        
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+        .tabs::-webkit-scrollbar {
+            display: none;
+        }
+        
+        .tab {
+            padding: 8px 12px;
+            margin-right: 5px;
+            border: 1px solid #00ff00;
+            border-radius: 5px 5px 0 0;
+            cursor: pointer;
+            background: #0a1a0a;
+            font-size: 13px;
+            white-space: nowrap;
+        }
+        
+        .tab.active {
+            background: #003300;
+            border-bottom-color: #003300;
+        }
+        
+        .tab-content {
+            display: none;
+            border-top: 1px solid #00ff00;
+            padding-top: 15px;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .nft-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .nft-card {
+            border: 1px solid #00ff00;
+            border-radius: 5px;
+            padding: 10px;
+            background: #0d1f0d;
+        }
+        
+        .nft-image {
+            width: 100%;
+            height: auto;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+        
+        .collection-card {
+            border: 1px solid #00ff00;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 15px;
+            background: #0d1f0d;
+        }
+
+        .my-nft-item .nft-token-id {
+            margin-bottom: 3px;
+        }
+        .alert-button {
+            background-color: #2a3b47; /* Darker, less transparent base */
+            color: #00ff99; /* Light green text for visibility */
+            border: 1px solid #00ff99; /* Green border */
+            padding: 3px 6px;
+            font-size: 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            /* opacity: 0.8; */ /* Removed default opacity */
+        }
+        .alert-button:hover {
+            /* opacity: 1; */ /* No need if base is not opaque */
+            background-color: #00ff99; /* Bright green background on hover */
+            color: #0a1a20; /* Dark text on hover for contrast */
+            border-color: #00ff99;
+        }
+        .alert-button.active {
+            background-color: #00ff99; /* Bright green background for active */
+            color: #0a1a20; /* Dark text for active */
+            font-weight: bold;
+            border-color: #00dd88; /* Slightly darker green border for active */
+        }
+        .alert-button:disabled {
+            background-color: #1a2130; /* Darker, desaturated background for disabled */
+            color: #556677; /* Greyed out text */
+            border-color: #334455; /* Darker border */
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+        .price-line {
+            display: flex;
+            align-items: center; /* Vertically align icon and text */
+            gap: 4px; /* Space between icon and text */
+            margin-top: 3px; /* Consistent spacing for price lines */
+        }
+        .alert-icon-button {
+            background: transparent; /* No background by default */
+            border: none;
+            color: #555; /* dark grey for inactive */
+            padding: 2px 4px; /* Small margin */
+            font-size: 16px; /* Increased icon size */
+            cursor: pointer;
+            line-height: 1;
+            opacity: 0.5; /* Semi-transparent inactive */
+            border-radius: 3px; /* Light rounding */
+            transition: color 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+        }
+        .alert-icon-button:hover:not(.active) {
+            color: #777; /* Lighter on hover for inactive */
+            opacity: 0.7;
+            background-color: #2c2c2c; /* Background on hover for inactive */
+        }
+        .alert-icon-button.active {
+            color: #FFFF00; /* Yellow for active icon */
+            box-shadow: 0 0 6px 1px #FFFF00; /* Yellow glow */
+            opacity: 1;
+            background-color: #ffff001a; /* Very light yellow, semi-transparent background */
+        }
+        .alert-icon-button.active:hover {
+            color: #FFFFAA; /* Lighter yellow on hover */
+            background-color: #ffff002a;
+            box-shadow: 0 0 8px 2px #FFFF00; /* Stronger yellow glow on hover */
+        }
+        .alert-icon-button:disabled {
+            color: #555; /* Darker grey for disabled */
+            cursor: not-allowed;
+        }
+        /* Commented out .price-label and .price-value removed */
+        .alert-icon-button.active.offer-alert {
+            color: #00FF00; /* Green for active offer icon */
+            box-shadow: 0 0 6px 1px #00FF00; /* Green glow */
+            background-color: #00ff001a; /* Very light green, semi-transparent background */
+        }
+        .alert-icon-button.active.offer-alert:hover {
+            color: #33FF33; /* Lighter green on hover */
+            background-color: #00ff002a;
+            box-shadow: 0 0 8px 2px #00FF00; /* Stronger green glow on hover */
+        }
+        /* Commented out .price-label and .price-value removed */
+    </style>
+</head>
+<body>
+    <div class="terminal">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
+            <h1 style="margin: 0; line-height: 1.2; font-size: 24px;">Zroop Terminal</h1>
+            <div style="display: flex; align-items: center; margin-top: 1px;"> 
+                <div id="current-gas-display" style="font-size: 11px; color: #888; margin-right: 4px;">Gas: Loading...</div>
+                <button id="refresh-gas-button" style="background: none; border: none; color: #00bb77; cursor: pointer; font-size: 13px; padding: 0; line-height: 1;">&#x21bb;</button>
+            </div>
+        </div>
+        
+        <!-- Tabs -->
+        <div class="tabs">
+            <div class="tab active" onclick="openTab(event, 'collections')">Modularium</div>
+            <div class="tab" onclick="openTab(event, 'my-nfts')">My NFTs</div>
+            <div class="tab" onclick="openTab(event, 'favorites')">Favorites</div>
+            <div class="tab" onclick="openTab(event, 'terminal')">Terminal</div>
+        </div>
+
+        <!-- DEBUG OUTPUT START -->
+        <!-- 
+        <div id="interface-debug-output" style="padding: 10px; margin-top: 10px; background-color: #111; color: #0f0; font-family: monospace; font-size: 12px; white-space: pre-wrap; border: 1px solid #0f0; max-height: 150px; overflow-y: auto;">Interface Debug Log:
+</div>
+        -->
+        <!-- DEBUG OUTPUT END -->
+        
+        <!-- Content of [Modularium] tab -->
+        <div id="collections" class="tab-content active">
+            <h2>[Modularium]</h2>
+            <div id="collection-list" class="nft-grid">
+                <div class="loading">Loading collections...</div>
+            </div>
+            <div class="pagination-controls" style="text-align: center; margin-top: 20px;">
+                <button id="prev-page-button" class="button">Previous</button>
+                <span id="page-info" style="margin: 0 10px;">Page 1 / 1</span>
+                <button id="next-page-button" class="button">Next</button>
+            </div>
+        </div>
+        
+        <!-- Content of My NFTs tab -->
+        <div id="my-nfts" class="tab-content">
+            <div class="panel">
+                <h2>My NFTs</h2>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <div class="network-selector" style="margin-bottom: 0;">
+                        <label for="my-nfts-network" style="margin-right: 10px;">Network:</label>
+                        <select id="my-nfts-network" disabled style="background-color: #102830; color: #00ff99; border: 1px solid #00ff99;">
+                            <option value="forma">Forma</option>
+                            <option value="ethereum" disabled>Ethereum (Coming Soon)</option>
+                            <option value="base" disabled>Base (Coming Soon)</option>
+                        </select>
+                    </div>
+                    <button id="refresh-my-nfts-button" class="button" style="padding: 5px 10px; font-size: 12px;">Refresh NFTs</button>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <div class="sort-selector">
+                        <label for="my-nfts-sort" style="margin-right: 10px;">Sort by:</label>
+                        <select id="my-nfts-sort" style="background-color: #102830; color: #00ff99; border: 1px solid #00ff99;">
+                            <option value="default" selected>Default</option>
+                            <option value="collection">Collection</option>
+                            <!-- <option value="date" disabled>Date (Coming Soon)</option> -->
+                        </select>
+                    </div>
+                    <div class="filter-selector" style="margin-left: 20px;">
+                        <input type="checkbox" id="my-nfts-modularium-only-filter" style="vertical-align: middle;">
+                        <label for="my-nfts-modularium-only-filter" style="font-size: 13px; vertical-align: middle;">Modularium Only</label>
+                    </div>
+                </div>
+                <div id="my-nft-list" class="nft-grid" style="grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px;">
+                    <p><i>Loading your NFTs...</i></p>
+                </div>
+                <div class="pagination-controls" style="text-align: center; margin-top: 20px;">
+                    <button id="my-nfts-prev-page-button" class="button" disabled>Previous</button>
+                    <span id="my-nfts-page-info" style="margin: 0 10px;">Page 1 / 1</span>
+                    <button id="my-nfts-next-page-button" class="button" disabled>Next</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Content of Favorites tab -->
+        <div id="favorites" class="tab-content">
+            <div class="panel">
+                <h2>Favorite Collections</h2>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <div class="network-selector">
+                    <label for="favorites-network" style="margin-right: 10px;">Network:</label>
+                    <select id="favorites-network" disabled style="background-color: #102830; color: #00ff99; border: 1px solid #00ff99;">
+                        <option value="forma">Forma</option>
+                        <option value="ethereum" disabled>Ethereum (Coming Soon)</option>
+                        <option value="base" disabled>Base (Coming Soon)</option>
+                    </select>
+                </div>
+                    <button id="refresh-favorites-button" class="button" style="padding: 5px 10px; font-size: 12px;">Refresh Favorites</button>
+                    <button id="clear-all-alerts-button" class="button" style="padding: 5px 10px; font-size: 12px; background-color: #b30000;">Clear All Alerts</button>
+                </div>
+                
+                <div id="favorite-collection-list" class="nft-grid">
+                    <p><i>Loading favorites...</i></p>
+                </div>
+                 <div class="pagination-controls" style="text-align: center; margin-top: 20px;">
+                    <button id="favorites-prev-page-button" class="button" disabled>Previous</button>
+                    <span id="favorites-page-info" style="margin: 0 10px;">Page 1 / 1</span>
+                    <button id="favorites-next-page-button" class="button" disabled>Next</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Content of Terminal tab -->
+        <div id="terminal" class="tab-content">
+            <div class="panel">
+                <h2>Terminal & Alert System</h2>
+                <p>This section is currently under development.</p>
+                <p>Here you will be able to:</p>
+                <ul>
+                    <li>Select a network for monitoring (Forma, Ethereum, Base, etc.).</li>
+                    <li>Search for NFT contracts by address (and by name in the future).</li>
+                    <li>View detailed contract information (name, supply, floor, activity).</li>
+                    <li>Set up flexible alerts for NFT events.</li>
+                </ul>
+                <p><strong>Coming Soon!</strong></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
+
+        const OFFER_ALERTS_ENABLED = false; // Define the missing variable
+
+        const apiUrl = '/'; // Assuming the frontend is served by the same backend
+        let userData = tg.initDataUnsafe?.user;
+        
+        // --- DEV MODE ---
+        const urlParams = new URLSearchParams(window.location.search);
+        const devMode = urlParams.get('dev') === 'true';
+        
+        async function initializeDevMode() {
+            if (devMode) {
+                const devTelegramIdFromUrl = urlParams.get('telegramId');
+                if (devTelegramIdFromUrl) {
+                    try {
+                        const response = await fetch(`${apiUrl}api/v1/users/dev/is-admin/${devTelegramIdFromUrl}`); // Corrected URL
+                        const data = await response.json();
+                        if (response.ok && data.success && data.isAdmin) {
+                            console.warn("DEV MODE ACTIVE: Mocking Telegram user data for admin ID:", devTelegramIdFromUrl);
+                            userData = {
+                                id: parseInt(devTelegramIdFromUrl),
+                                first_name: "DevAdmin",
+                                last_name: "User",
+                                username: `devadmin_${devTelegramIdFromUrl}`,
+                                language_code: "en",
+                                allows_write_to_pm: true
+                            };
+                            tg.initDataUnsafe.user = userData;
+                            tg.MainButton = {
+                                show: () => {}, // console.log("DEV MODE: tg.MainButton.show()"),
+                                hide: () => {}, // console.log("DEV MODE: tg.MainButton.hide()"),
+                                setText: (text) => {}, // console.log(`DEV MODE: tg.MainButton.setText('${text}')`),
+                                setParams: (params) => {}, // console.log("DEV MODE: tg.MainButton.setParams()", params),
+                            };
+                            tg.BackButton = {
+                                show: () => {}, // console.log("DEV MODE: tg.BackButton.show()"),
+                                hide: () => {}, // console.log("DEV MODE: tg.BackButton.hide()"),
+                            };
+                            tg.HapticFeedback = {
+                                impactOccurred: (style) => {}, // console.log(`DEV MODE: tg.HapticFeedback.impactOccurred('${style}')`),
+                                notificationOccurred: (type) => {}, // console.log(`DEV MODE: tg.HapticFeedback.notificationOccurred('${type}')`),
+                                selectionChanged: () => {}, // console.log("DEV MODE: tg.HapticFeedback.selectionChanged()"),
+                            };
+                            return true; // Dev mode initialized successfully for admin
+                        } else {
+                            console.error("DEV MODE: Access Denied. Provided Telegram ID is not an admin or API error.", data);
+                            document.body.innerHTML = '<p class="error">DEV MODE: Access Denied. User is not an authorized administrator or an error occurred.</p>';
+                            return false; // Dev mode initialization failed
+                        }
+                    } catch (error) {
+                        console.error("DEV MODE: Error during admin check.", error);
+                        document.body.innerHTML = '<p class="error">DEV MODE: Error checking admin status. Could not initialize.</p>';
+                        return false; // Dev mode initialization failed
+                    }
+                } else {
+                    // If dev=true but no telegramId is provided, deny access.
+                    console.error("DEV MODE: Access Denied. telegramId is required for dev mode.");
+                    document.body.innerHTML = '<p class="error">DEV MODE: Access Denied. Telegram ID is required for developer mode.</p>';
+                    return false; // Dev mode initialization failed
+                }
+            }
+            return true; // Not in dev mode, or dev mode successfully initialized if it was an admin
+        }
+        // --- END DEV MODE ---
+        
+        let currentPage = 1;
+        const collectionsPerPage = 20; 
+        let allCollections = []; // To store all fetched collections
+        let totalPages = 1;
+
+        let myNftsCache = null; // Cache for user's NFTs
+        let myNftsCurrentPage = 1;
+        const myNftsItemsPerPage = 20; // Number of NFTs to display per page on "My NFTs" tab
+        let myNftsTotalPages = 1;
+
+        let activeAlertSubscriptions = []; // Cache for user's active alert subscriptions
+        
+        let favoritesCache = null; // Cache for favorite collections
+        let favoritesCurrentPage = 1;
+        const favoritesPerPage = 20;
+        let favoritesTotalPages = 1;
+
+        // Function to load active alert subscriptions
+        async function loadActiveAlertSubscriptions() {
+            if (!userData || !userData.id) {
+                // console.warn("[WebApp] User data not available, cannot load alert subscriptions.");
+                return;
+            }
+            try {
+                const response = await fetch(`${apiUrl}api/v1/users/${userData.id}/alerts/subscriptions`);
+                if (!response.ok) {
+                    console.error(`[WebApp] Error fetching alert subscriptions: ${response.status}`);
+                    activeAlertSubscriptions = []; // Reset on error
+                    return;
+                }
+                const data = await response.json();
+                if (data && Array.isArray(data.subscriptions)) {
+                    activeAlertSubscriptions = data.subscriptions;
+                } else {
+                    activeAlertSubscriptions = [];
+                }
+            } catch (error) {
+                console.error('[WebApp] Failed to load alert subscriptions:', error);
+                activeAlertSubscriptions = [];
+            }
+        }
+
+        // Helper to check if an alert is active
+        function isAlertActive(collectionAddress, alertType) {
+            const isActive = activeAlertSubscriptions.some(sub => {
+                const match = sub.collectionAddress.toLowerCase() === collectionAddress.toLowerCase() && sub.type === alertType;
+                // console.log(`[isAlertActive] Checking: Sub ${sub.collectionAddress.toLowerCase()} vs ${collectionAddress.toLowerCase()}, Type ${sub.type} vs ${alertType} => Match: ${match}`);
+                return match;
+            });
+            // console.log(`[isAlertActive] Final result for ${collectionAddress}, ${alertType}: ${isActive}`);
+            return isActive;
+        }
+
+        // NEW updated function
+        function formatPriceWithCurrency(price) {
+            if (price === undefined || price === null || isNaN(parseFloat(price)) || parseFloat(price) === 0) {
+                return '--'; 
+            }
+
+            const number = parseFloat(price);
+            
+            // Convert number to string. If it's in scientific notation, convert it to fixed-point.
+            let numberString = number.toString();
+            if (numberString.includes('e')) {
+                // For very small or very large numbers, JavaScript might use scientific notation.
+                // We need to convert it to a full string representation.
+                // This part can be tricky to do perfectly for all edge cases without a library.
+                // A simple approach for reasonably small numbers:
+                if (Math.abs(number) < 1.0) {
+                    const e = parseInt(numberString.split('e-')[1]);
+                    if (e) {
+                        numberString = number.toFixed(e + 4); // Show a few more digits than the exponent
+                    }
+                }
+                // For larger numbers, toFixed() might also be okay, or just let it be.
+            }
+
+            // If after toFixed (or originally) it has a decimal point and ends with zeros, remove them.
+            if (numberString.includes('.')) {
+                numberString = numberString.replace(/0+$/, ''); // Remove trailing zeros
+                if (numberString.endsWith('.')) {
+                    numberString = numberString.slice(0, -1); // Remove trailing decimal point
+                }
+            }
+
+            return `${numberString} TIA`;
+        }
+
+        function displayCollectionsForPage(page) {
+            const listElement = document.getElementById('collection-list');
+            listElement.innerHTML = ''; // Clear current list
+
+            const startIndex = (page - 1) * collectionsPerPage;
+            const endIndex = startIndex + collectionsPerPage;
+            const collectionsToDisplay = allCollections.slice(startIndex, endIndex);
+
+            if (collectionsToDisplay.length === 0 && page === 1) {
+                listElement.innerHTML = '<div class="loading">No collections found.</div>';
+                document.getElementById('page-info').textContent = `Page 1 / 1`;
+                document.getElementById('prev-page-button').disabled = true;
+                document.getElementById('next-page-button').disabled = true;
+                return;
+            }
+            
+            collectionsToDisplay.forEach(collection => {
+                const item = document.createElement('div');
+                item.className = 'nft-item';
+                const imageUrl = collection.imageUrl || '/images/collections/placeholder.webp';
+                
+                const displayTitleId = collection.id || 'N/A'; // For display in title tooltip
+                const baseCollectionAddress = collection.address; // Base address, used for the *condition* to show buttons
+
+                let alertPathForButton = baseCollectionAddress; // Default to base address
+                if (collection.id && typeof collection.id === 'string' && collection.id.toLowerCase().includes('/instance/')) {
+                    alertPathForButton = collection.id; // Use full ID if it's an instance path
+                }
+                
+                // For debugging: console.log(`[Modularium Tab Render] Collection: "${collection.name}", ID: "${collection.id}", BaseAddr: "${baseCollectionAddress}", AlertPath: "${alertPathForButton}"`);
+
+                const isFloorAlertActive = alertPathForButton ? isAlertActive(alertPathForButton, 'floor_change') : false;
+                const isOfferAlertActive = alertPathForButton ? isAlertActive(alertPathForButton, 'offer_change') : false;
+
+
+                item.innerHTML = `
+                    <div class="nft-image-container">
+                        <img src="/images/collections/placeholder.webp" data-src="${imageUrl}" alt="${collection.name}" class="nft-image lazy-image" onerror="console.error('Collection Image Error. Attempted src:', this.src, 'Original data-src:', this.dataset.src); this.onerror=null;this.src='/images/collections/placeholder.webp';">
+                    </div>
+                    <div class="collection-info">
+                        <div class="collection-name" title="${collection.name} (ID: ${displayTitleId})">${collection.name}</div>
+                        <div class="price-container">
+                            <div class="price-line floor-price">
+                                ${baseCollectionAddress ? `
+                                <button 
+                                    class="alert-icon-button floor-alert-trigger ${isFloorAlertActive ? 'active' : ''}" 
+                                    data-collection-address="${alertPathForButton}" 
+                                    data-collection-name="${collection.name || alertPathForButton}"
+                                    data-alert-type="floor_change"
+                                    title="${isFloorAlertActive ? 'Deactivate' : 'Activate'} Floor Alert">
+                                    ${isFloorAlertActive ? '&#9679;' : '&#9675;'}
+                                </button>
+                                ` : ''}
+                                <span class="price-label" style="color: #00ddff; font-size: 12px;">Floor:</span> 
+                                <span class="price-value" style="color: #00ddff; font-size: 12px;">${formatPriceWithCurrency(collection.floorPrice)}</span>
+                            </div>
+                            <div class="price-line best-offer">
+                                ${baseCollectionAddress ? `
+                                <button 
+                                    class="alert-icon-button offer-alert-trigger ${isOfferAlertActive ? 'active offer-alert' : ''}" 
+                                    data-collection-address="${alertPathForButton}" 
+                                    data-collection-name="${collection.name || alertPathForButton}"
+                                    data-alert-type="offer_change" 
+                                    title="${isOfferAlertActive ? 'Deactivate' : 'Activate'} Offer Alert">
+                                    ${isOfferAlertActive ? '&#9679;' : '&#9675;'}
+                                </button>
+                                ` : ''}
+                                <span class="price-label" style="color: #FFA500; font-size: 12px;">Offer:</span> 
+                                <span class="price-value" style="color: #FFA500; font-size: 12px;">${formatPriceWithCurrency(collection.bestOffer)}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                // item.addEventListener('click', () => selectCollection(collection)); // Commented out as selectCollection is not defined
+                listElement.appendChild(item);
+            });
+
+            document.getElementById('page-info').textContent = `Page ${page} / ${totalPages}`;
+            document.getElementById('prev-page-button').disabled = page === 1;
+            document.getElementById('next-page-button').disabled = page === totalPages;
+            initLazyLoad();
+        }
+
+        async function loadCollections() {
+            const listElement = document.getElementById('collection-list');
+            const loadingIndicator = listElement.querySelector('.loading') || document.createElement('div');
+            loadingIndicator.className = 'loading';
+            loadingIndicator.textContent = 'Loading all collections...';
+            if (!listElement.querySelector('.loading')) {
+                listElement.innerHTML = ''; // Clear if not already showing loading for initial load
+                listElement.appendChild(loadingIndicator);
+            }
+            
+            document.getElementById('prev-page-button').disabled = true;
+            document.getElementById('next-page-button').disabled = true;
+
+            try {
+                // Fetch ALL collections. Adjust limit as needed, or implement smarter chunking if 1000 is too much.
+                // The backend's getCollections needs to support a large limit or no limit.
+                const response = await fetch(`${apiUrl}api/v1/collections/all?page=1&limit=1000`); 
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+        }
+                const data = await response.json();
+                allCollections = data.items || [];
+                
+                if (allCollections.length === 0) {
+                    listElement.innerHTML = '<div class="loading">No collections found after fetching.</div>';
+                    totalPages = 1;
+                    currentPage = 1;
+                } else {
+                    totalPages = Math.ceil(allCollections.length / collectionsPerPage);
+                    currentPage = 1; // Reset to first page
+                }
+                displayCollectionsForPage(currentPage);
+                
+            } catch (error) {
+                console.error('Error loading collections:', error);
+                listElement.innerHTML = '<div class="loading">Error loading collections. Please try again.</div>';
+            }
+        }
+
+        document.getElementById('prev-page-button').addEventListener('click', () => {
+            if (currentPage > 1) {
+                currentPage--;
+                displayCollectionsForPage(currentPage);
+            }
+        });
+
+        document.getElementById('next-page-button').addEventListener('click', () => {
+            if (currentPage < totalPages) {
+                currentPage++;
+                displayCollectionsForPage(currentPage);
+            }
+        });
+        
+        // Function to load and update gas price display
+        async function updateGasPriceDisplay() {
+            const gasDisplayElement = document.getElementById('current-gas-display');
+            const refreshButton = document.getElementById('refresh-gas-button');
+            if (!gasDisplayElement || !refreshButton) return;
+
+            gasDisplayElement.textContent = 'Gas: Loading...';
+            refreshButton.disabled = true;
+            
+            try {
+                const response = await fetch(`${apiUrl}api/v1/gas/price`); 
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ error: 'Unknown error fetching gas price' }));
+                    // console.warn(`Failed to fetch gas price: ${response.status} - ${errorData.error || response.statusText}`);
+                    gasDisplayElement.textContent = 'Gas: N/A';
+                    return;
+                }
+                const responseData = await response.json();
+
+                if (!responseData.success || !responseData.gasPrice) {
+                    // console.warn(`Error in gas price API response: ${responseData.error || 'Gas price data missing'}`);
+                    gasDisplayElement.textContent = 'Gas: N/A';
+                    return;
+                }
+
+                const gasData = responseData.gasPrice;
+                const gweiPrice = gasData.formatted?.gwei;
+                const tiaPriceString = gasData.formatted?.tia; // This is like "0.000000019"
+
+                if (tiaPriceString) {
+                    try {
+                        const tiaValue = parseFloat(tiaPriceString);
+                        const ntiaValue = (tiaValue * 1e9).toFixed(1); // Convert TIA to nTIA and format
+                        gasDisplayElement.textContent = `Gas: ${ntiaValue} nTia`;
+                    } catch (e) {
+                        console.error("Error formatting nTia from TIA string:", tiaPriceString, e);
+                        gasDisplayElement.textContent = 'Gas: N/A';
+                    }
+                } else if (gweiPrice && gweiPrice !== 'N/A' && gweiPrice !== 'Error') { // Fallback to Gwei if TIA is not available for some reason
+                    gasDisplayElement.textContent = `Gas: ${gweiPrice} Gwei`;
+                } else if (gasData.current) {
+                     try {
+                       const currentGwei = parseFloat(viem.formatUnits(BigInt(gasData.current), 9)).toFixed(2);
+                       gasDisplayElement.textContent = `Gas: ${currentGwei} Gwei`;
+                     } catch(e) {
+                        console.error("Error formatting current gas price:", e);
+                        gasDisplayElement.textContent = 'Gas: N/A';
+                     }
+                } else {
+                    gasDisplayElement.textContent = 'Gas: N/A';
+                }
+            } catch (error) {
+                // Only log error if it's not an AbortError (if we re-add timeout later)
+                // For now, always log other errors.
+                console.error('Error updating gas price display:', error);
+                gasDisplayElement.textContent = 'Gas: N/A';
+            } finally {
+                refreshButton.disabled = false;
+            }
+        }
+
+        // Function to load user's NFTs
+        async function loadMyNfts() { // Made async
+            const listElement = document.getElementById('my-nft-list');
+            const sortSelectElement = document.getElementById('my-nfts-sort');
+
+            if (!userData || !userData.id) {
+                if (listElement) listElement.innerHTML = '<p class="error">User data not found. Cannot load NFTs.</p>';
+                return;
+            }
+            
+            if (!listElement) { 
+                return;
+            }
+            
+            // It's important to await subscriptions before rendering if this function is called on tab switch
+            // However, initial load might call this in parallel, so subscription loading is also in DOMContentLoaded.
+            // For tab switches, openTab handles awaiting loadActiveAlertSubscriptions.
+
+            const sortBy = (sortSelectElement instanceof HTMLSelectElement) ? sortSelectElement.value : 'default';
+
+            // Cache is handled by the refresh button now. If myNftsCache exists, we re-render.
+            // The actual fetch only happens if myNftsCache is null (cleared by refresh or first load).
+            if (myNftsCache !== null) {
+                renderMyNfts(listElement, sortBy);
+                const refreshButton = document.getElementById('refresh-my-nfts-button');
+                if (refreshButton) refreshButton.disabled = false;
+                return; 
+            }
+
+            listElement.innerHTML = '<div class="loading">Loading your NFTs...</div>';
+            const selectedNetwork = 'forma';
+            const refreshButton = document.getElementById('refresh-my-nfts-button');
+            if (refreshButton) refreshButton.disabled = true; // Disable refresh button during load
+
+            // Always fetch all NFTs. The backend should ideally mark which ones are Modularium-compatible.
+            let fetchUrl = `${apiUrl}api/v1/nfts/owned-by-user/${userData.id}?network=${selectedNetwork}`;
+            
+
+            try {
+                const response = await fetch(fetchUrl);
+                const responseText = await response.text(); 
+                const data = JSON.parse(responseText);
+
+                if (!data.success || !Array.isArray(data.nfts)) {
+                    myNftsCache = []; 
+                    listElement.innerHTML = '<p class="error">Error loading your NFTs or no NFTs found in response.</p>';
+                } else {
+                    myNftsCache = data.nfts; // Store fetched data in cache
+                }
+                
+                // Calculate total pages for My NFTs after cache is populated or updated
+                myNftsTotalPages = Math.ceil((myNftsCache?.length || 0) / myNftsItemsPerPage);
+                if (myNftsTotalPages === 0) myNftsTotalPages = 1; // Ensure at least 1 page even if empty
+                // myNftsCurrentPage = 1; // Reset to page 1 on fresh load/reload - Handled by refresh button logic clearing cache
+
+                if (myNftsCache.length === 0 && data.success) { // Check data.success to distinguish from fetch error
+                    listElement.innerHTML = '<p>You currently do not own any NFTs on the Forma network.</p>';
+                } else if (!data.success) {
+                    // Error message already set above
+                } else {
+                     renderMyNfts(listElement, sortBy); // No need to pass nfts, it will use myNftsCache
+                }
+                updateMyNftsPaginationControls(); // Update controls even if list is empty
+
+            } catch (error) {
+                console.error('Error loading your NFTs:', error);
+                listElement.innerHTML = `<p class="error">Failed to load your NFTs: ${error.message}</p>`;
+                myNftsCache = null; // Don't cache on critical fetch error, allow retry
+            } finally {
+                if (refreshButton) refreshButton.disabled = false; // Re-enable refresh button
+            }
+        }
+
+        function renderMyNfts(listElement, sortBy) {
+            if (!myNftsCache) { // Should not happen if loadMyNfts was called
+                listElement.innerHTML = '<p class="error">NFT data cache is empty.</p>';
+                updateMyNftsPaginationControls();
+                return;
+            }
+            listElement.innerHTML = ''; 
+            let nftsToProcess = [...myNftsCache]; // Start with all cached NFTs
+
+            // Client-side filtering based on the checkbox
+            const modulariumOnlyCheckbox = document.getElementById('my-nfts-modularium-only-filter');
+            if (modulariumOnlyCheckbox instanceof HTMLInputElement && modulariumOnlyCheckbox.checked) {
+                nftsToProcess = nftsToProcess.filter(nft => nft.isModulariumMarketplace === true);
+            }
+
+            let sortedNfts = [...nftsToProcess]; // Work with a copy from the (potentially) filtered cache
+
+            if (sortBy === 'collection') {
+                sortedNfts.sort((a, b) => {
+                    const collectionA = a.collectionName?.toLowerCase() || '';
+                    const collectionB = b.collectionName?.toLowerCase() || '';
+                    if (collectionA < collectionB) return -1;
+                    if (collectionA > collectionB) return 1;
+                    const nameA = a.name?.toLowerCase() || a.tokenId?.toString() || '';
+                    const nameB = b.name?.toLowerCase() || b.tokenId?.toString() || '';
+                    if (nameA < nameB) return -1;
+                    if (nameA > nameB) return 1;
+                    return 0;
+                });
+            }
+
+            // Client-side pagination logic
+            const startIndex = (myNftsCurrentPage - 1) * myNftsItemsPerPage;
+            const endIndex = startIndex + myNftsItemsPerPage;
+            const nftsToDisplay = sortedNfts.slice(startIndex, endIndex);
+
+            if (nftsToDisplay.length === 0 && myNftsCurrentPage === 1) {
+                if (myNftsCache.length > 0) { // Cache has items, but this page is somehow empty (should not happen with correct totalPages)
+                    listElement.innerHTML = '<p>No NFTs to display on this page.</p>';
+                } else {
+                    // This case is handled in loadMyNfts based on API response
+                    // listElement.innerHTML = '<p>You currently do not own any NFTs on the Forma network.</p>';
+                }
+            } else {
+                nftsToDisplay.forEach(nft => {
+                    const item = document.createElement('div');
+                    item.className = 'nft-item my-nft-item'; 
+                    const imageUrl = nft.imageUrl || '/images/collections/placeholder.webp';
+                    const isGroupedSummary = nft.isGroupedSummary === true;
+
+                    let quantityBadgeHtml = '';
+                    if (isGroupedSummary && nft.quantity) { 
+                        quantityBadgeHtml = `<div class="nft-quantity-badge">x${nft.quantity}</div>`;
+                    }
+
+                    // Determine alertPathForButton for My NFTs tab
+                    const alertPathForButton = nft.alertCollectionPath || nft.contractAddress; 
+                    const baseCollectionAddressForCondition = nft.alertCollectionPath || nft.contractAddress; 
+
+                    const isFloorAlertActive = alertPathForButton ? isAlertActive(alertPathForButton, 'floor_change') : false;
+                    const isOfferAlertActive = alertPathForButton ? isAlertActive(alertPathForButton, 'offer_change') : false;
+
+                    let cardContent = `
+                        <div class="nft-image-container" style="height: 150px;"> 
+                                <img src="/images/collections/placeholder.webp" data-src="${imageUrl}" alt="${nft.name || 'NFT'}" class="nft-image lazy-image" onerror="this.onerror=null;this.src='/images/collections/placeholder.webp';">
+                            ${quantityBadgeHtml}
+                        </div>
+                        <div class="collection-info">
+                                <div class="collection-name" style="font-size: 13px;" title="${nft.name || 'N/A'}">${nft.name || 'N/A'}</div>
+                            
+                                <div class="nft-token-id" style="font-size: 12px; color: #ccc;" title="Token ID: ${nft.tokenId}">ID: ${nft.tokenId}</div>
+                            <div class="price-container" style="margin-top: 5px;">
+                                    <div class="price-line floor-price" style="font-size: 12px;">
+                                        ${baseCollectionAddressForCondition && nft.isModulariumMarketplace ? `
+                                        <button 
+                                            class="alert-icon-button floor-alert-trigger ${isFloorAlertActive ? 'active' : ''}" 
+                                            data-collection-address="${alertPathForButton}" 
+                                            data-collection-name="${nft.collectionName || alertPathForButton}" 
+                                            data-alert-type="floor_change"
+                                            title="${isFloorAlertActive ? 'Deactivate' : 'Activate'} Floor Alert">
+                                            ${isFloorAlertActive ? '&#9679;' : '&#9675;'}
+                                        </button>
+                                        ` : ''}
+                                        <span class="price-label" style="color: #00ddff; font-size: 12px;">Floor:</span> 
+                                        <span class="price-value" style="color: #00ddff; font-size: 12px;">${formatPriceWithCurrency(nft.floorPrice)}</span>
+                                    </div>
+                                    <div class="price-line offer-price" style="font-size: 12px; margin-top: 3px;">
+                                        ${baseCollectionAddressForCondition && nft.isModulariumMarketplace ? `
+                                        <button 
+                                            class="alert-icon-button offer-alert-trigger ${isOfferAlertActive ? 'active offer-alert' : ''}" 
+                                            data-collection-address="${alertPathForButton}" 
+                                            data-collection-name="${nft.collectionName || alertPathForButton}" 
+                                            data-alert-type="offer_change" 
+                                            title="${isOfferAlertActive ? 'Deactivate' : 'Activate'} Offer Alert" 
+                                            >
+                                            ${isOfferAlertActive ? '&#9679;' : '&#9675;'}
+                                        </button>
+                                        ` : ''}
+                                        <span class="price-label" style="color: #FFA500; font-size: 12px;">Offer:</span> 
+                                        <span class="price-value" style="color: #FFA500; font-size: 12px;">${formatPriceWithCurrency(nft.bestOffer)}</span>
+                                    </div>
+                            </div>
+                        </div>
+                    `;
+                    item.innerHTML = cardContent;
+
+                    if (isGroupedSummary) { 
+                        item.style.cursor = 'pointer';
+                        item.addEventListener('click', () => {
+                                // console.warn(`[WebApp Notification] You own ${nft.totalOwnedInCollection} NFTs from the '${nft.collectionName}' collection. Detailed view coming soon! (Previously tg.showAlert)`);
+                                showTemporaryNotification(`You own ${nft.totalOwnedInCollection} NFTs from '${nft.collectionName}'. Detailed view soon!`); // More user-friendly
+                        });
+                    }
+
+                    listElement.appendChild(item);
+                }); 
+            }
+            initLazyLoad(); 
+            updateMyNftsPaginationControls(); 
+        }
+
+        function updateMyNftsPaginationControls() {
+            const pageInfo = document.getElementById('my-nfts-page-info');
+            const prevButton = document.getElementById('my-nfts-prev-page-button');
+            const nextButton = document.getElementById('my-nfts-next-page-button');
+
+            if (pageInfo) {
+                pageInfo.textContent = `Page ${myNftsCurrentPage} / ${myNftsTotalPages}`;
+            }
+            if (prevButton) {
+                prevButton.disabled = myNftsCurrentPage === 1;
+            }
+            if (nextButton) {
+                nextButton.disabled = myNftsCurrentPage >= myNftsTotalPages;
+            }
+        }
+
+        const myNftSortSelect = document.getElementById('my-nfts-sort');
+        if (myNftSortSelect) {
+            myNftSortSelect.addEventListener('change', () => {
+                // When sort changes, we re-render from cache if available,
+                // but we don't need to re-fetch unless cache is null.
+                if (myNftsCache !== null) {
+                    const listElement = document.getElementById('my-nft-list');
+                    const sortBy = myNftSortSelect.value;
+                    if (listElement) {
+                         renderMyNfts(listElement, sortBy);
+                    }
+                } else {
+                    myNftsCurrentPage = 1; // Reset page if loading from scratch
+                    loadMyNfts(); // If cache is empty, a sort change should trigger a load
+                }
+            });
+        }
+
+        async function loadFavorites() {
+            const listElement = document.getElementById('favorite-collection-list');
+            if (!listElement) {
+                return;
+            }
+
+            const refreshButton = document.getElementById('refresh-favorites-button');
+            if (refreshButton) refreshButton.disabled = true;
+
+            if (favoritesCache !== null) {
+                renderFavoritesPage(); 
+                if (refreshButton) refreshButton.disabled = false;
+                return;
+            }
+            
+            listElement.innerHTML = '<div class="loading">Loading your favorite collections...</div>';
+
+            // Await activeAlertSubscriptions and allCollections to be loaded if not already.
+            // This is a simplified approach; a more robust solution might use Promise.all or chain loads.
+            if (allCollections.length === 0 || activeAlertSubscriptions.length === 0 && !initialFavoritesLoadAttempted) {
+                // console.log("[Favorites] Waiting for allCollections or activeAlertSubscriptions to populate.");
+                initialFavoritesLoadAttempted = true; // Mark that we tried, to avoid infinite loops if one is empty
+                // If they are truly empty, the checks below will handle it.
+                // This timeout is a fallback to re-check.
+                // If this tab is opened before allCollections is loaded, it might show an empty state initially.
+                // The tab switching logic for 'favorites' already clears cache and calls loadFavorites again.
+            }
+
+
+            if (allCollections.length === 0) {
+                listElement.innerHTML = '<p><i>Visit the Modularium tab to discover collections. Alerts you set will appear here.</i></p>';
+                favoritesCache = []; 
+                favoritesTotalPages = 1;
+                favoritesCurrentPage = 1;
+                renderFavoritesPage(); 
+                if (refreshButton) refreshButton.disabled = false; // Ensure enabled
+                return;
+            }
+
+            if (activeAlertSubscriptions.length === 0) {
+                listElement.innerHTML = '<p><i>You have no active alerts. Collections with active alerts appear here.</i></p>';
+                favoritesCache = []; 
+                favoritesTotalPages = 1;
+                favoritesCurrentPage = 1;
+                renderFavoritesPage(); 
+                if (refreshButton) refreshButton.disabled = false; // Ensure enabled
+                return;
+            }
+            
+            const filteredFavorites = allCollections.filter(collection => {
+                if (!collection.address) { // Check for base address
+                    return false;
+                }
+                // Determine the path to check against subscriptions
+                let alertCheckPath = collection.address;
+                if (collection.id && typeof collection.id === 'string' && collection.id.toLowerCase().includes('/instance/')) {
+                    alertCheckPath = collection.id;
+                }
+
+                const isFloorActive = isAlertActive(alertCheckPath, 'floor_change');
+                const isOfferActive = isAlertActive(alertCheckPath, 'offer_change');
+                return isFloorActive || isOfferActive;
+            });
+            
+            favoritesCache = filteredFavorites;
+            favoritesTotalPages = Math.ceil(favoritesCache.length / favoritesPerPage);
+            if (favoritesTotalPages === 0) favoritesTotalPages = 1;
+            
+            renderFavoritesPage();
+            if (refreshButton) refreshButton.disabled = false; // Ensure enabled
+        }
+
+        function renderFavoritesPage() { // Renamed from displayFavorites and now handles pagination logic
+            const listElement = document.getElementById('favorite-collection-list');
+            if (!listElement) return;
+            listElement.innerHTML = ''; 
+
+            if (!favoritesCache || favoritesCache.length === 0) {
+                if (activeAlertSubscriptions.length === 0) {
+                     listElement.innerHTML = '<p><i>You have no active alerts. Collections with active alerts appear here.</i></p>';
+                } else if (allCollections.length === 0) {
+                    listElement.innerHTML = '<p><i>Visit the Modularium tab to discover collections. Alerts you set will appear here.</i></p>';
+                } else {
+                    listElement.innerHTML = '<p><i>No collections with active alerts found. Set alerts on other tabs.</i></p>';
+                }
+                updateFavoritesPaginationControls();
+                return;
+            }
+
+            const startIndex = (favoritesCurrentPage - 1) * favoritesPerPage;
+            const endIndex = startIndex + favoritesPerPage;
+            const collectionsToDisplay = favoritesCache.slice(startIndex, endIndex);
+
+            if (collectionsToDisplay.length === 0 && favoritesCurrentPage > 1) {
+                // This case might happen if alerts change and current page becomes empty
+                favoritesCurrentPage--;
+                renderFavoritesPage(); // Re-render previous page
+                return;
+            }
+            if (collectionsToDisplay.length === 0 && favoritesCurrentPage === 1) {
+                 listElement.innerHTML = '<p><i>No favorite collections to display on this page.</i></p>'; // Should be caught by earlier checks
+            }
+            
+            collectionsToDisplay.forEach(collection => {
+                const item = document.createElement('div');
+                item.className = 'nft-item'; // Using the same styling as Modularium tab
+                const imageUrl = collection.imageUrl || '/images/collections/placeholder.webp';
+                
+                const displayTitleId = collection.id || 'N/A';
+                const baseCollectionAddress = collection.address;
+
+                let alertPathForButton = baseCollectionAddress;
+                if (collection.id && typeof collection.id === 'string' && collection.id.toLowerCase().includes('/instance/')) {
+                    alertPathForButton = collection.id;
+                }
+                // console.log(`[Favorites Tab Render] Collection: "${collection.name}", ID: "${collection.id}", BaseAddr: "${baseCollectionAddress}", AlertPath: "${alertPathForButton}"`);
+
+
+                const isFloorAlertActive = alertPathForButton ? isAlertActive(alertPathForButton, 'floor_change') : false;
+                const isOfferAlertActive = alertPathForButton ? isAlertActive(alertPathForButton, 'offer_change') : false;
+
+
+                item.innerHTML = `
+                    <div class="nft-image-container">
+                        <img src="/images/collections/placeholder.webp" data-src="${imageUrl}" alt="${collection.name}" class="nft-image lazy-image" onerror="console.error('Favorite Collection Image Error. Attempted src:', this.src, 'Original data-src:', this.dataset.src); this.onerror=null;this.src='/images/collections/placeholder.webp';">
+                    </div>
+                    <div class="collection-info">
+                        <div class="collection-name" title="${collection.name} (ID: ${displayTitleId})">${collection.name}</div>
+                        <div class="price-container">
+                            <div class="price-line floor-price">
+                                ${baseCollectionAddress ? `
+                                <button 
+                                    class="alert-icon-button floor-alert-trigger ${isFloorAlertActive ? 'active' : ''}" 
+                                    data-collection-address="${alertPathForButton}" 
+                                    data-collection-name="${collection.name || alertPathForButton}"
+                                    data-alert-type="floor_change"
+                                    title="${isFloorAlertActive ? 'Deactivate' : 'Activate'} Floor Alert">
+                                    ${isFloorAlertActive ? '&#9679;' : '&#9675;'}
+                                </button>
+                                ` : ''}
+                                <span class="price-label" style="color: #00ddff; font-size: 12px;">Floor:</span> 
+                                <span class="price-value" style="color: #00ddff; font-size: 12px;">${formatPriceWithCurrency(collection.floorPrice)}</span>
+                            </div>
+                            <div class="price-line best-offer">
+                                ${baseCollectionAddress ? `
+                                <button 
+                                    class="alert-icon-button offer-alert-trigger ${isOfferAlertActive ? 'active offer-alert' : ''}" 
+                                    data-collection-address="${alertPathForButton}" 
+                                    data-collection-name="${collection.name || alertPathForButton}"
+                                    data-alert-type="offer_change" 
+                                    title="${isOfferAlertActive ? 'Deactivate' : 'Activate'} Offer Alert">
+                                    ${isOfferAlertActive ? '&#9679;' : '&#9675;'}
+                                </button>
+                                ` : ''}
+                                <span class="price-label" style="color: #FFA500; font-size: 12px;">Offer:</span> 
+                                <span class="price-value" style="color: #FFA500; font-size: 12px;">${formatPriceWithCurrency(collection.bestOffer)}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                listElement.appendChild(item);
+            });
+            initLazyLoad(); // Initialize lazy loading for images in favorites
+            updateFavoritesPaginationControls();
+        }
+
+        function updateFavoritesPaginationControls() {
+            const pageInfo = document.getElementById('favorites-page-info');
+            const prevButton = document.getElementById('favorites-prev-page-button');
+            const nextButton = document.getElementById('favorites-next-page-button');
+
+            if (pageInfo) {
+                pageInfo.textContent = `Page ${favoritesCurrentPage} / ${favoritesTotalPages}`;
+            }
+            if (prevButton) {
+                prevButton.disabled = favoritesCurrentPage === 1;
+            }
+            if (nextButton) {
+                // Disable if on the last page, or if total pages is 0 (which means 1 effective page)
+                nextButton.disabled = favoritesCurrentPage >= favoritesTotalPages || favoritesTotalPages === 0;
+            }
+        }
+
+        // Tab switching logic
+        const tabs = document.querySelectorAll('.tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', (event) => { // Changed to pass event directly
+                const targetTabName = tab.getAttribute('onclick').match(/openTab\(event, '([^\']*)'\)/)[1];
+                openTab(event, targetTabName); // Call openTab with event and targetTabName
+            });
+        });
+        
+        // Initial load
+        document.addEventListener('DOMContentLoaded', async () => { // Make DOMContentLoaded async
+            const devModeInitialized = await initializeDevMode(); // Wait for dev mode to potentially initialize
+            if (!devModeInitialized && devMode) { // If dev mode was attempted but failed, stop further execution
+                return;
+            }
+
+            if (!userData && !devMode) { // Adjusted condition: if not (userData AND !devMode), then error
+                 console.error("Telegram user data not available and not in dev mode.");
+                 document.body.innerHTML = '<p class="error">Error: Could not get Telegram user data. Please open this app through the Telegram bot.</p>';
+                 return;
+            }
+            //console.log("User data:", userData);
+            // Load the default tab content (Modularium collections)
+            loadCollections(); // This will also call displayCollectionsForPage which now might need activeAlertSubscriptions
+            loadActiveAlertSubscriptions().then(() => {
+                // Ensure collections are re-rendered if they loaded before subscriptions
+                // This is a bit of a quick fix; ideally, rendering waits for all necessary data.
+                if (document.getElementById('collections').classList.contains('active') && allCollections.length > 0) {
+                    displayCollectionsForPage(currentPage);
+                }
+            });
+
+            // --- Parallel loading for other tabs ---
+            // Load My NFTs data in the background. 
+            // The function loadMyNfts itself will handle caching and rendering logic based on tab visibility later.
+            loadMyNfts();
+
+            // Initial gas price load - NO LONGER IN AN INTERVAL
+            updateGasPriceDisplay();
+
+            // Add event listener for manual gas refresh button
+            const refreshButton = document.getElementById('refresh-gas-button');
+            if (refreshButton) {
+                refreshButton.addEventListener('click', updateGasPriceDisplay);
+            }
+
+            // Add event listener for unlink button
+             const unlinkButton = document.getElementById('unlink-wallet-button');
+             if(unlinkButton) {
+                 unlinkButton.addEventListener('click', unlinkWallet);
+             }
+
+            // Add event listeners for pagination buttons
+            const prevButton = document.getElementById('prev-page-button');
+            const nextButton = document.getElementById('next-page-button');
+
+            if (prevButton) {
+                prevButton.addEventListener('click', () => {
+                    if (currentPage > 1) {
+                        loadCollections(currentPage - 1);
+                    }
+                });
+            }
+
+            if (nextButton) {
+                nextButton.addEventListener('click', () => {
+                    if (currentPage < totalPages) {
+                        loadCollections(currentPage + 1);
+                    }
+                });
+             }
+
+            // Add event listener for the My NFTs refresh button HERE
+            const refreshMyNftsBtn = document.getElementById('refresh-my-nfts-button');
+            if (refreshMyNftsBtn) {
+                refreshMyNftsBtn.addEventListener('click', () => {
+                    myNftsCache = null; // Clear the cache
+                    myNftsCurrentPage = 1; // Reset to page 1 on refresh
+                    loadMyNfts();       // Reload NFTs
+                });
+            }
+
+            // Add event listener for the Modularium Only filter checkbox
+            const modulariumOnlyFilterCheckbox = document.getElementById('my-nfts-modularium-only-filter');
+            if (modulariumOnlyFilterCheckbox) {
+                modulariumOnlyFilterCheckbox.addEventListener('change', () => {
+                    myNftsCurrentPage = 1; // Reset to page 1
+                    const listElement = document.getElementById('my-nft-list');
+                    const sortSelectElement = document.getElementById('my-nfts-sort');
+                    const sortBy = (sortSelectElement instanceof HTMLSelectElement) ? sortSelectElement.value : 'default';
+                    
+                    if (listElement && myNftsCache) { // Ensure cache is populated
+                        renderMyNfts(listElement, sortBy);
+                    } else if (listElement && !myNftsCache) {
+                        // If cache is not yet populated (e.g., initial load hasn't finished or was cleared),
+                        // trigger a full load. loadMyNfts will fetch all, then renderMyNfts will apply the filter.
+                 loadMyNfts();
+                    }
+                });
+            }
+
+            // Event listeners for My NFTs pagination buttons
+            const myNftsPrevButton = document.getElementById('my-nfts-prev-page-button');
+            const myNftsNextButton = document.getElementById('my-nfts-next-page-button');
+
+            if (myNftsPrevButton) {
+                myNftsPrevButton.addEventListener('click', () => {
+                    if (myNftsCurrentPage > 1) {
+                        myNftsCurrentPage--;
+                        const listElement = document.getElementById('my-nft-list');
+                        const sortSelectElement = document.getElementById('my-nfts-sort');
+                        const sortBy = (sortSelectElement instanceof HTMLSelectElement) ? sortSelectElement.value : 'default';
+                        renderMyNfts(listElement, sortBy);
+                    }
+                });
+            }
+
+            if (myNftsNextButton) {
+                myNftsNextButton.addEventListener('click', () => {
+                    if (myNftsCurrentPage < myNftsTotalPages) {
+                        myNftsCurrentPage++;
+                        const listElement = document.getElementById('my-nft-list');
+                        const sortSelectElement = document.getElementById('my-nfts-sort');
+                        const sortBy = (sortSelectElement instanceof HTMLSelectElement) ? sortSelectElement.value : 'default';
+                        renderMyNfts(listElement, sortBy);
+                    }
+                });
+            }
+
+            // Ensure the content of the initially active tab is rendered correctly if data arrived from parallel load
+            const activeTabElement = document.querySelector('.tab.active');
+            if (activeTabElement) {
+                const activeTabName = activeTabElement.getAttribute('onclick')?.match(/openTab\(event, '([^']*)'\)/)?.[1];
+                if (activeTabName === 'collections') {
+                    // displayCollectionsForPage will be called by loadCollections or the .then() of loadActiveAlertSubscriptions
+                } else if (activeTabName === 'my-nfts') {
+                    // If myNftsCache is populated by the parallel load, render it.
+                    // loadMyNfts() itself will check cache and render if necessary.
+                    // To be absolutely sure rendering happens for the active tab if data is ready:
+                    if (myNftsCache && document.getElementById('my-nfts').style.display === 'block') {
+                        const listElement = document.getElementById('my-nft-list');
+                        const sortSelectElement = document.getElementById('my-nfts-sort');
+                        const sortBy = (sortSelectElement instanceof HTMLSelectElement) ? sortSelectElement.value : 'default';
+                        renderMyNfts(listElement, sortBy);
+                    }
+                }
+                // Add similar for 'favorites' when implemented
+            }
+        });
+
+        async function openTab(evt, tabName) { // Made async
+            var i, tabcontent, tablinks;
+
+            // Always load fresh alert subscriptions before displaying any tab that uses them
+            // This ensures alert states are up-to-date when switching tabs.
+            await loadActiveAlertSubscriptions();
+
+            tabcontent = document.getElementsByClassName("tab-content");
+            for (i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].style.display = "none";
+            }
+            tablinks = document.getElementsByClassName("tab");
+            for (i = 0; i < tablinks.length; i++) {
+                tablinks[i].className = tablinks[i].className.replace(" active", "");
+            }
+            document.getElementById(tabName).style.display = "block";
+            // evt.currentTarget refers to the element that triggered the event (the tab div)
+            // If openTab is called directly, evt might be null or not what's expected.
+            // It's safer to find the tab by tabName if we need to mark it active here,
+            // but the original tabs.forEach already handles this.
+            if (evt && evt.currentTarget) {
+                 evt.currentTarget.className += " active";
+            } else {
+                // Fallback if called without an event, find the tab by its data attribute or other means
+                const tabElement = Array.from(tabs).find(t => t.getAttribute('onclick')?.includes(`openTab(event, '${tabName}')`));
+                if (tabElement) {
+                    tabElement.className += " active";
+                }
+            }
+
+            if (tabName === 'collections') {
+                if (allCollections.length > 0) { 
+                    await displayCollectionsForPage(currentPage); // await if it becomes async
+                } else {
+                    await loadCollections(); 
+                }
+                initLazyLoad();
+            } else if (tabName === 'my-nfts') {
+                await loadMyNfts(); 
+            } else if (tabName === 'favorites') {
+                favoritesCache = null; 
+                favoritesCurrentPage = 1; // Reset to first page when tab is opened
+                await loadFavorites(); 
+            } else if (tabName === 'terminal') {
+            }
+        }
+
+        // Lazy loading for images
+        const lazyLoadImages = () => {
+            const imageTargets = document.querySelectorAll('img.lazy-image');
+            const imageObserver = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const image = entry.target;
+                        image.src = image.dataset.src;
+                        image.classList.remove('lazy-image');
+                        observer.unobserve(image);
+                    }
+                });
+            });
+
+            imageTargets.forEach(image => imageObserver.observe(image));
+        };
+
+        // Call lazyLoadImages after content is rendered or tabs are switched
+        // For example, at the end of displayCollectionsForPage, renderMyNfts, and inside openTab
+        // Helper to re-initialize lazy loading on dynamic content
+        const initLazyLoad = () => {
+            // Small timeout to ensure DOM has updated
+            setTimeout(lazyLoadImages, 100);
+        };
+
+        // --- Temporary Notification Helper ---
+        let mainButtonOriginalText = "";
+        let mainButtonWasVisible = false;
+        let notificationTimeoutId = null;
+        let initialFavoritesLoadAttempted = false; // Added for loadFavorites logic
+
+        function showTemporaryNotification(message, duration = 2500) {
+            if (!tg.MainButton) return; // Guard against MainButton not being available
+
+            if (notificationTimeoutId) { // Clear previous timeout if a new notification comes quickly
+                clearTimeout(notificationTimeoutId);
+                // Restore immediately if there was an ongoing notification, to avoid text clash
+                if (mainButtonWasVisible) {
+                    tg.MainButton.setText(mainButtonOriginalText);
+                } else {
+                    tg.MainButton.hide();
+                }
+            }
+
+            mainButtonOriginalText = tg.MainButton.text;
+            mainButtonWasVisible = tg.MainButton.isVisible;
+
+            tg.MainButton.setText(message);
+            tg.MainButton.show();
+
+            notificationTimeoutId = setTimeout(() => {
+                if (mainButtonWasVisible) {
+                    tg.MainButton.setText(mainButtonOriginalText);
+                } else {
+                    tg.MainButton.hide();
+                }
+                notificationTimeoutId = null; // Reset timeoutId
+            }, duration);
+        }
+
+        // --- Alert Click Logic ---
+        async function handleAlertButtonClick(event) { // Made async
+            const button = event.target.closest('.alert-icon-button');
+            if (!button) return;
+
+            if (!userData || !userData.id) {
+                console.error("[WebApp] User data not available, cannot manage alerts.");
+                // tg.showAlert("User data not available. Please restart the WebApp.");
+                showTemporaryNotification("Error: User data not available.");
+                return;
+            }
+
+            const collectionAddress = button.dataset.collectionAddress;
+            const alertType = button.dataset.alertType; // e.g., 'floor_change'
+            const collectionName = button.dataset.collectionName || collectionAddress.substring(0,6) + "..."; // Read collection name
+            // console.log(`[WebApp handleAlertButtonClick] Clicked. Collection: ${collectionName} (${collectionAddress}), Type: ${alertType}, Current isActive: ${isAlertActive(collectionAddress, alertType)}`); // DEBUG REMOVED
+
+            if (!collectionAddress || !alertType) {
+                console.error("[WebApp] Missing data attributes on alert button.", button);
+                // tg.showAlert("Error: Missing alert data. Please refresh.");
+                showTemporaryNotification("Error: Missing alert data.");
+                return;
+            }
+
+            const isActive = button.classList.contains('active');
+            const newActiveState = !isActive;
+
+            // Store original state for potential rollback
+            const originalButtonState = {
+                active: isActive,
+                html: button.innerHTML,
+                title: button.title
+            };
+
+            // --- Client-side check for existing subscription ID before deactivating ---
+            let subscriptionIdToDeactivate = null;
+            if (!newActiveState) { // If we are trying to DEACTIVATE
+                const subIndexToDeactivate = activeAlertSubscriptions.findIndex(
+                    sub => sub.collectionAddress.toLowerCase() === collectionAddress.toLowerCase() && sub.type === alertType
+                );
+                if (subIndexToDeactivate !== -1 && activeAlertSubscriptions[subIndexToDeactivate].id) {
+                    subscriptionIdToDeactivate = activeAlertSubscriptions[subIndexToDeactivate].id;
+                } else {
+                    // Already inactive or no ID found in cache, likely already processed or cache out of sync
+                    // console.warn(`[WebApp] Deactivation attempted for an alert not found in cache with an ID, or already inactive. Collection: ${collectionName}, Type: ${alertType}`);
+                    // Optimistically update UI to inactive state if it's not already, then notify and exit.
+                    if (isActive) { // If button still showed active, make it inactive
+                        button.classList.remove('active');
+                        button.innerHTML = '&#9675;'; // empty circle
+                        button.title = `Activate ${alertType === 'floor_change' ? 'Floor' : 'Offer'} Alert`;
+                    }
+                    showTemporaryNotification(`Alert for ${collectionName} is already inactive.`);
+                    return; // Exit because no server call is needed
+                }
+            }
+            // --- End client-side check ---
+
+            // Optimistic UI update
+            button.classList.toggle('active', newActiveState);
+            if (alertType === 'offer_change') {
+                button.classList.toggle('offer-alert', newActiveState);
+            }
+            button.innerHTML = newActiveState ? '&#9679;' : '&#9675;'; // Filled vs empty circle
+            button.title = newActiveState 
+                ? `Deactivate ${alertType === 'floor_change' ? 'Floor' : 'Offer'} Alert` 
+                : `Activate ${alertType === 'floor_change' ? 'Floor' : 'Offer'} Alert`;
+            // if (alertType === 'offer_change') { // Offer alerts are still indicative // COMMENTED OUT
+            //      button.title += (newActiveState ? ` (Coming Soon)` : ` (Coming Soon)`);
+            // }
+
+
+            if (newActiveState) { // ACTIVATE alert
+                // tg.showAlert(`Activating ${alertType === 'floor_change' ? 'floor' : 'other'} alert...`);
+                showTemporaryNotification(`Activating alert for ${collectionName}...`);
+                try {
+                    const response = await fetch(`${apiUrl}api/v1/users/${userData.id}/alerts/subscriptions`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            type: alertType,
+                            collectionAddress: collectionAddress,
+                            thresholdValue: null // For now, floor_change doesn't use threshold from client
+                        })
+                    });
+                    const data = await response.json();
+
+                    if (!response.ok || !data.subscription || !data.subscription.id) { // Corrected condition
+                        throw new Error(data.message || `Server error ${response.status}`);
+                    }
+                    
+                    // Update client cache with the ID from the server
+                    const existingSubIndex = activeAlertSubscriptions.findIndex(
+                        sub => sub.collectionAddress.toLowerCase() === collectionAddress.toLowerCase() && sub.type === alertType
+                    );
+                    if (existingSubIndex !== -1) { // Should ideally not happen if activating, but good to be safe
+                        activeAlertSubscriptions[existingSubIndex].id = data.subscription.id;
+                    } else {
+                        activeAlertSubscriptions.push({
+                            id: data.subscription.id, // Store the ID from backend
+                            collectionAddress: collectionAddress,
+                            type: alertType,
+                            thresholdValue: null 
+                        });
+                    }
+                    // tg.showAlert(`Alert for ${collectionAddress.substring(0,6)}... activated! Bot will notify you.`);
+                    // console.log(`[WebApp] Alert for ${collectionAddress.substring(0,6)}... activated! API Response:`, data);
+                    showTemporaryNotification(`Alert for ${collectionName} activated!`);
+                    if (tg.HapticFeedback && typeof tg.HapticFeedback.impactOccurred === 'function') {
+                        tg.HapticFeedback.impactOccurred('light');
+                    }
+
+                } catch (error) {
+                    console.error('[WebApp] API Error creating subscription:', error);
+                    // tg.showAlert(`Error activating alert: ${error.message}. Reverting.`);
+                    // console.log(`[WebApp] Error activating alert: ${error.message}. Reverting.`);
+                    showTemporaryNotification(`Error: ${error.message}`);
+                    // Rollback UI
+                    button.classList.toggle('active', originalButtonState.active);
+                    if (alertType === 'offer_change') {
+                        button.classList.toggle('offer-alert', originalButtonState.active);
+                    }
+                    button.innerHTML = originalButtonState.html;
+                    button.title = originalButtonState.title;
+                    // Rollback client cache
+                    const subIndex = activeAlertSubscriptions.findIndex(
+                        s => s.collectionAddress.toLowerCase() === collectionAddress.toLowerCase() && s.type === alertType && !s.id // only remove if it was a temp client add
+                    );
+                    if (subIndex !== -1) activeAlertSubscriptions.splice(subIndex, 1);
+                }
+
+            } else { // DEACTIVATE alert
+                const originalSubscriptionData = { ...activeAlertSubscriptions[activeAlertSubscriptions.findIndex(s => s.id === subscriptionIdToDeactivate)] }; // For rollback, find by new ID var
+
+                showTemporaryNotification(`Deactivating alert for ${collectionName}...`);
+                // console.log(`[WebApp] Attempting to DELETE subscription. UserID: ${userData.id}, SubscriptionID: ${subscriptionIdToDeactivate}, URL: ${apiUrl}api/v1/users/${userData.id}/alerts/subscriptions/${subscriptionIdToDeactivate}`); // REMOVED DEBUG LOG
+                try {
+                    const response = await fetch(`${apiUrl}api/v1/users/${userData.id}/alerts/subscriptions/${subscriptionIdToDeactivate}`, {
+                        method: 'DELETE'
+                    });
+                    const data = await response.json(); // Even for DELETE, API sends a JSON confirmation
+
+                    if (!response.ok || !data.success) {
+                         throw new Error(data.message || `Server error ${response.status}`);
+                    }
+
+                    // Remove from client cache on successful API call
+                    activeAlertSubscriptions.splice(activeAlertSubscriptions.findIndex(s => s.id === subscriptionIdToDeactivate), 1);
+                    // tg.showAlert(`Alert for ${collectionAddress.substring(0,6)}... deactivated.`);
+                    // console.log(`[WebApp] Alert for ${collectionAddress.substring(0,6)}... deactivated. API Response:`, data);
+                    showTemporaryNotification(`Alert for ${collectionName} deactivated.`);
+                     if (tg.HapticFeedback && typeof tg.HapticFeedback.impactOccurred === 'function') {
+                        tg.HapticFeedback.impactOccurred('light');
+                    }
+
+                } catch (error) {
+                    console.error('[WebApp] API Error deleting subscription:', error);
+                    // tg.showAlert(`Error deactivating alert: ${error.message}. Reverting.`);
+                    // console.log(`[WebApp] Error deactivating alert: ${error.message}. Reverting.`);
+                    showTemporaryNotification(`Error: ${error.message}`);
+                    // Rollback UI
+                    button.classList.toggle('active', originalButtonState.active);
+                    if (alertType === 'offer_change') {
+                        button.classList.toggle('offer-alert', originalButtonState.active);
+                    }
+                    button.innerHTML = originalButtonState.html;
+                    button.title = originalButtonState.title;
+                    // Rollback client cache by re-adding
+                    if (activeAlertSubscriptions.findIndex(s => s.id === subscriptionIdToDeactivate) !== -1) { // Ensure it was indeed removed for rollback
+                         activeAlertSubscriptions.splice(activeAlertSubscriptions.findIndex(s => s.id === subscriptionIdToDeactivate), 0, originalSubscriptionData); // Add it back at original position
+                    }
+                }
+            }
+        
+            const activeTabElement = document.querySelector('.tab.active');
+            const activeTabContentId = activeTabElement ? activeTabElement.getAttribute('onclick')?.match(/openTab\(event, '([^\']*)'\)/)?.[1] : null;
+
+            if (activeTabContentId) {
+                // console.log(`[WebApp handleAlertButtonClick] Alert processed, forcing re-render of active tab: ${activeTabContentId}`);
+                if (activeTabContentId === 'collections') {
+                    if (allCollections.length > 0) { displayCollectionsForPage(currentPage); } else { loadCollections(); }
+                } else if (activeTabContentId === 'my-nfts') {
+                    const listElement = document.getElementById('my-nft-list');
+                    const sortSelectElement = document.getElementById('my-nfts-sort');
+                    const sortBy = (sortSelectElement instanceof HTMLSelectElement) ? sortSelectElement.value : 'default';
+                    if (listElement && myNftsCache) { renderMyNfts(listElement, sortBy); } else { loadMyNfts(); }
+                } else if (activeTabContentId === 'favorites') {
+                    favoritesCache = null; // Force reload for favorites as its content depends directly on alerts
+                    favoritesCurrentPage = 1;
+                    loadFavorites();
+                }
+            }
+        }
+
+        // Attach event listener using delegation
+        const collectionListElement = document.getElementById('collection-list');
+        if (collectionListElement) {
+            collectionListElement.addEventListener('click', handleAlertButtonClick);
+        }
+        // NOTE: This listener is only for the 'Modularium' tab's collection list.
+        // Similar listeners would be needed for 'My NFTs' and 'Favorites' if they have alert buttons.
+
+        const myNftListElement = document.getElementById('my-nft-list');
+        if (myNftListElement) {
+            myNftListElement.addEventListener('click', handleAlertButtonClick);
+        }
+
+        const favoriteListElement = document.getElementById('favorite-collection-list');
+        if (favoriteListElement) {
+            favoriteListElement.addEventListener('click', handleAlertButtonClick);
+        }
+
+        // Event listeners for Favorites pagination and refresh
+        const favoritesPrevButton = document.getElementById('favorites-prev-page-button');
+        if (favoritesPrevButton) {
+            favoritesPrevButton.addEventListener('click', () => {
+                if (favoritesCurrentPage > 1) {
+                    favoritesCurrentPage--;
+                    renderFavoritesPage();
+                }
+            });
+        }
+
+        const favoritesNextButton = document.getElementById('favorites-next-page-button');
+        if (favoritesNextButton) {
+            favoritesNextButton.addEventListener('click', () => {
+                if (favoritesCurrentPage < favoritesTotalPages) {
+                    favoritesCurrentPage++;
+                    renderFavoritesPage();
+                }
+            });
+        }
+
+        const refreshFavoritesBtn = document.getElementById('refresh-favorites-button');
+        if (refreshFavoritesBtn) {
+            refreshFavoritesBtn.addEventListener('click', () => {
+                favoritesCache = null; // Clear the cache
+                loadFavorites();       // Reload favorites
+            });
+        }
+
+        // Event listener for Clear All Alerts button
+        const clearAllAlertsBtn = document.getElementById('clear-all-alerts-button');
+        if (clearAllAlertsBtn) {
+            clearAllAlertsBtn.addEventListener('click', handleClearAllAlerts);
+        }
+
+        async function handleClearAllAlerts() {
+            if (!userData || !userData.id) {
+                showTemporaryNotification("Error: User data not available.");
+                return;
+            }
+
+            tg.showConfirm("Are you sure you want to delete ALL your alert subscriptions? This action cannot be undone.", async (confirmed) => {
+                if (confirmed) {
+                    showTemporaryNotification("Clearing all alerts...");
+                    // console.log(`[WebApp handleClearAllAlerts] User confirmed. userData.id to be used in URL: ${userData?.id}`); // DEBUG
+                    try {
+                        const response = await fetch(`${apiUrl}api/v1/users/${userData.id}/alerts/subscriptions/all`, {
+                            method: 'DELETE'
+                        });
+                        const data = await response.json();
+
+                        if (!response.ok || !data.success) {
+                            throw new Error(data.message || `Server error ${response.status}`);
+                        }
+
+                        activeAlertSubscriptions = []; // Clear local cache
+                        showTemporaryNotification("All alerts cleared successfully!");
+                        if (tg.HapticFeedback && typeof tg.HapticFeedback.impactOccurred === 'function') {
+                            tg.HapticFeedback.impactOccurred('medium');
+                        }
+
+                        // Refresh current view - especially if it's favorites or has alert icons
+                        const activeTabElement = document.querySelector('.tab.active');
+                        const activeTabContentId = activeTabElement ? activeTabElement.getAttribute('onclick')?.match(/openTab\(event, '([^']*)'\)/)?.[1] : null;
+                        
+                        if (activeTabContentId === 'favorites') {
+                            favoritesCache = null; 
+                            favoritesCurrentPage = 1;
+                            loadFavorites(); // This will show empty state
+                        } else if (activeTabContentId === 'collections') {
+                            if (allCollections.length > 0) { displayCollectionsForPage(currentPage); } else { loadCollections(); }
+                        } else if (activeTabContentId === 'my-nfts') {
+                            const listElement = document.getElementById('my-nft-list');
+                            const sortSelectElement = document.getElementById('my-nfts-sort');
+                            const sortBy = (sortSelectElement instanceof HTMLSelectElement) ? sortSelectElement.value : 'default';
+                            if (listElement && myNftsCache) { renderMyNfts(listElement, sortBy); } else { loadMyNfts(); }
+                        }
+
+                    } catch (error) {
+                        console.error('[WebApp] API Error clearing all subscriptions:', error);
+                        showTemporaryNotification(`Error clearing alerts: ${error.message}`);
+                    }
+                }
+            });
+        }
+
+        // Add a style for the quantity badge
+        const styleElement = document.createElement('style');
+        styleElement.textContent = `
+            .nft-quantity-badge {
+                position: absolute;
+                top: 5px;
+                right: 5px;
+                background-color: rgba(0, 255, 153, 0.85);
+                color: #0a1a20;
+                padding: 2px 6px;
+                border-radius: 4px;
+                font-size: 11px;
+                font-weight: bold;
+                line-height: 1;
+            }
+            .my-nft-item .collection-info {
+                text-align: left; /* Override default center from .nft-item if needed */
+                padding: 8px; /* Consistent padding */
+            }
+            .my-nft-item .nft-token-id {
+                margin-bottom: 3px;
+            }
+            /* Old .alert-button styles removed as they are replaced by .alert-icon-button */
+            .price-line {
+                display: flex;
+                align-items: center; /* Vertically align icon and text */
+                gap: 6px; /* Increased Space between icon and text */
+                margin-top: 3px; /* Consistent spacing for price lines */
+            }
+            .alert-icon-button {
+                background: transparent; /* No background by default */
+                border: none;
+                color: #555; /* dark grey for inactive */
+                padding: 5px 8px; /* Increased padding for touch target */
+                font-size: 16px; /* Increased icon size */
+                cursor: pointer;
+                line-height: 1;
+                opacity: 0.5; /* Semi-transparent inactive */
+                border-radius: 3px; /* Light rounding */
+                transition: color 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+            }
+            .alert-icon-button:hover:not(.active) {
+                color: #777; /* Lighter on hover for inactive */
+                opacity: 0.7;
+                background-color: #2c2c2c; /* Background on hover for inactive */
+            }
+            .alert-icon-button.active {
+                color: #FFFF00; /* Yellow for active icon */
+                box-shadow: 0 0 6px 1px #FFFF00; /* Yellow glow */
+                opacity: 1;
+                background-color: #ffff001a; /* Very light yellow, semi-transparent background */
+            }
+            .alert-icon-button.active:hover {
+                color: #FFFFAA; /* Lighter yellow on hover */
+                background-color: #ffff002a;
+                box-shadow: 0 0 8px 2px #FFFF00; /* Stronger yellow glow on hover */
+            }
+            .alert-icon-button:disabled {
+                color: #555; /* Darker grey for disabled */
+                cursor: not-allowed;
+            }
+            /* Commented out .price-label and .price-value removed */
+        `;
+        document.head.appendChild(styleElement);
+    </script>
+</body>
+</html> 

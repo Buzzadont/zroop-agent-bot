@@ -1,0 +1,1825 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Modularium API",
+    "version": "1.1.0",
+    "description": "API for querying NFTs on Forma and Modularium marketplace data"
+  },
+  "paths": {
+    "/graphql": {
+      "post": {
+        "tags": ["GraphQL"],
+        "summary": "GraphQL API endpoint",
+        "description": "Access to Modularium data via GraphQL queries",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["query"],
+                "properties": {
+                  "query": {
+                    "type": "string",
+                    "description": "GraphQL query string"
+                  },
+                  "variables": {
+                    "type": "object",
+                    "description": "Variables for the GraphQL query"
+                  },
+                  "operationName": {
+                    "type": "string",
+                    "description": "Name of the operation to execute"
+                  }
+                }
+              },
+              "example": {
+                "query": "query Tokens { tokens(where: {tokenId_lte: \"1\"}, limit: 1000) { items { tokenAddress tokenId totalSupply collection { isMarketplaceAllowed } } } }"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful GraphQL query response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "description": "The data returned by the GraphQL query"
+                    },
+                    "errors": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          },
+                          "locations": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "line": {
+                                  "type": "integer"
+                                },
+                                "column": {
+                                  "type": "integer"
+                                }
+                              }
+                            }
+                          },
+                          "path": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid GraphQL query",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/balances/{owner}": {
+      "get": {
+        "tags": [
+          "Balances"
+        ],
+        "summary": "Get all token balances for an owner",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ownerParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/TokenBalanceListResponse"
+          },
+          "400": {
+            "description": "Invalid owner address",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "invalidOwner": {
+                    "$ref": "#/components/examples/invalidOwnerError"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/balances/{owner}/{tokenAddress}": {
+      "get": {
+        "tags": [
+          "Balances"
+        ],
+        "summary": "Get all balances for a specific token contract and owner",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ownerParam"
+          },
+          {
+            "$ref": "#/components/parameters/tokenAddressParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/TokenBalanceListResponse"
+          },
+          "400": {
+            "description": "Invalid owner or token address",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "invalidOwner": {
+                    "$ref": "#/components/examples/invalidOwnerError"
+                  },
+                  "invalidTokenAddress": {
+                    "$ref": "#/components/examples/invalidTokenAddressError"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/balances/{owner}/{tokenAddress}/{tokenId}": {
+      "get": {
+        "tags": [
+          "Balances"
+        ],
+        "summary": "Get balance for a specific token ID",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ownerParam"
+          },
+          {
+            "$ref": "#/components/parameters/tokenAddressParam"
+          },
+          {
+            "$ref": "#/components/parameters/tokenIdParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/TokenBalanceRowResponse"
+          },
+          "400": {
+            "description": "Invalid owner or token address",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "invalidOwner": {
+                    "$ref": "#/components/examples/invalidOwnerError"
+                  },
+                  "invalidTokenAddress": {
+                    "$ref": "#/components/examples/invalidTokenAddressError"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/collection/{tokenAddress}/token-ids": {
+      "get": {
+        "tags": [
+          "Collection"
+        ],
+        "summary": "Get token IDs",
+        "description": "Returns all token IDs for a collection",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tokenAddressParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/TokenIdListResponse"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidTokenAddressError"
+          }
+        }
+      }
+    },
+    "/collection/{tokenAddress}/floor-listings": {
+      "get": {
+        "tags": [
+          "Collection"
+        ],
+        "summary": "Get floor listings",
+        "description": "Returns the lowest price active listing for each tokenId in the collection",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tokenAddressParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/ListingListResponse"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidTokenAddressError"
+          }
+        }
+      }
+    },
+    "/collection/{tokenAddress}/tokens": {
+      "get": {
+        "tags": [
+          "Collection"
+        ],
+        "summary": "Get all tokens",
+        "description": "Returns all tokens in a collection",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tokenAddressParam"
+          },
+          {
+            "$ref": "#/components/parameters/attributesParam"
+          },
+          {
+            "$ref": "#/components/parameters/includeMetadataParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/TokenListResponse"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidTokenAddressError"
+          }
+        }
+      }
+    },
+    "/collection/{tokenAddress}/{tokenId}": {
+      "get": {
+        "tags": [
+          "Collection"
+        ],
+        "summary": "Get token",
+        "description": "Returns a specific tokenId in the collection",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tokenAddressParam"
+          },
+          {
+            "$ref": "#/components/parameters/tokenIdParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/TokenRowResponse"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidTokenAddressError"
+          }
+        }
+      }
+    },
+    "/collection/{tokenAddress}/listings": {
+      "get": {
+        "tags": [
+          "Collection"
+        ],
+        "summary": "Get all listings",
+        "description": "Returns all active listings for a collection, sorted by price in ascending order",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tokenAddressParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/ListingListResponse"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidTokenAddressError"
+          }
+        }
+      }
+    },
+    "/collection/{tokenAddress}/offers": {
+      "get": {
+        "tags": [
+          "Collection"
+        ],
+        "summary": "Get all offers",
+        "description": "Returns all active offers for a collection, sorted by price in descending order",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tokenAddressParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OfferListResponse"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidTokenAddressError"
+          }
+        }
+      }
+    },
+    "/collection/{tokenAddress}/{tokenId}/floor-listing": {
+      "get": {
+        "tags": [
+          "Collection"
+        ],
+        "summary": "Get token floor listing",
+        "description": "Returns the lowest price active listing for a specific tokenId in the collection",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tokenAddressParam"
+          },
+          {
+            "$ref": "#/components/parameters/tokenIdParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/ListingRowResponse"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidTokenAddressError"
+          }
+        }
+      }
+    },
+    "/collection/{tokenAddress}/{tokenId}/listings": {
+      "get": {
+        "tags": [
+          "Collection"
+        ],
+        "summary": "Get token listings",
+        "description": "Returns all active listings for a specific tokenId in the collection, sorted by price in ascending order",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tokenAddressParam"
+          },
+          {
+            "$ref": "#/components/parameters/tokenIdParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/ListingListResponse"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidTokenAddressError"
+          }
+        }
+      }
+    },
+    "/collection/{tokenAddress}/{tokenId}/offers": {
+      "get": {
+        "tags": [
+          "Collection"
+        ],
+        "summary": "Get token offers",
+        "description": "Returns all active offers for a specific tokenId in the collection",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tokenAddressParam"
+          },
+          {
+            "$ref": "#/components/parameters/tokenIdParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OfferListResponse"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidTokenAddressError"
+          }
+        }
+      }
+    },
+    "/collection/{tokenAddress}/holders": {
+      "get": {
+        "tags": [
+          "Collection"
+        ],
+        "summary": "Get holders",
+        "description": "Returns all holders for a collection",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tokenAddressParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/HolderListResponse"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidTokenAddressError"
+          }
+        }
+      }
+    },
+    "/collection/{tokenAddress}/minters": {
+      "get": {
+        "tags": [
+          "Collection"
+        ],
+        "summary": "Get minters",
+        "description": "Returns all wallets that minted tokens from the collection and how many they minted",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tokenAddressParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/MinterListResponse"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidTokenAddressError"
+          }
+        }
+      }
+    },
+    "/collection/{tokenAddress}/{tokenId}/holders": {
+      "get": {
+        "tags": [
+          "Collection"
+        ],
+        "summary": "Get token holders",
+        "description": "Returns all holders for a specific tokenId in the collection",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tokenAddressParam"
+          },
+          {
+            "$ref": "#/components/parameters/tokenIdParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/HolderListResponse"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidTokenAddressError"
+          }
+        }
+      }
+    },
+    "/collection/{tokenAddress}/{tokenId}/minters": {
+      "get": {
+        "tags": [
+          "Collection"
+        ],
+        "summary": "Get token minters",
+        "description": "Returns all wallets that minted a specific tokenId and how many they minted",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tokenAddressParam"
+          },
+          {
+            "$ref": "#/components/parameters/tokenIdParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/MinterListResponse"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidTokenAddressError"
+          }
+        }
+      }
+    },
+    "/collection/{tokenAddress}/stats": {
+      "get": {
+        "tags": [
+          "Collection"
+        ],
+        "summary": "Get stats",
+        "description": "Returns stats for a collection",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tokenAddressParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/StatsResponse"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidTokenAddressError"
+          }
+        }
+      }
+    },
+    "/collection/{tokenAddress}/{tokenId}/stats": {
+      "get": {
+        "tags": [
+          "Collection"
+        ],
+        "summary": "Get token stats",
+        "description": "Returns stats for a specific tokenId in the collection",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tokenAddressParam"
+          },
+          {
+            "$ref": "#/components/parameters/tokenIdParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/StatsResponse"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidTokenAddressError"
+          }
+        }
+      }
+    },
+    "/collection/{tokenAddress}/activity": {
+      "get": {
+        "tags": [
+          "Collection"
+        ],
+        "summary": "Get marketplace activity",
+        "description": "Returns marketplace activity for a collection",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tokenAddressParam"
+          },
+          {
+            "$ref": "#/components/parameters/perPageParam"
+          },
+          {
+            "$ref": "#/components/parameters/pageParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/ActivityListResponse"
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/responses/InvalidTokenAddressError"
+                    },
+                    {
+                      "$ref": "#/components/responses/InvalidPerPageError"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/collection/{tokenAddress}/{tokenId}/activity": {
+      "get": {
+        "tags": [
+          "Collection"
+        ],
+        "summary": "Get token marketplace activity",
+        "description": "Returns marketplace activity for a specific tokenId in the collection",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tokenAddressParam"
+          },
+          {
+            "$ref": "#/components/parameters/tokenIdParam"
+          },
+          {
+            "$ref": "#/components/parameters/perPageParam"
+          },
+          {
+            "$ref": "#/components/parameters/pageParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/ActivityListResponse"
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/responses/InvalidTokenAddressError"
+                    },
+                    {
+                      "$ref": "#/components/responses/InvalidPerPageError"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/merkle-proof/{merkleRoot}/{address}": {
+      "get": {
+        "tags": [
+          "Merkle Proof"
+        ],
+        "summary": "Get merkle proof",
+        "description": "Returns a merkle proof for a given address",
+        "parameters": [
+          {
+            "name": "merkleRoot",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^0x[a-fA-F0-9]{64}$"
+            },
+            "description": "The merkle root to get a proof for",
+            "example": "0x90233cc9a95d9af5875072d9d9ae22d418750c99ae54b47160f5ce662aef8a06"
+          },
+          {
+            "name": "address",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^0x[a-fA-F0-9]{40}$"
+            },
+            "description": "Wallet address to get proof for",
+            "example": "0xc0de00000dE60f7F19C70311982e74c854E0ef6C"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns a merkle proof for the given address",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "proof": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "description": "Hex string representing a node in the merkle proof"
+                      },
+                      "description": "Array of hex strings representing the merkle proof"
+                    }
+                  }
+                },
+                "example": {
+                  "proof": [
+                    "0x79d8e386251ae0ed7b362ca781e89df2a7a03ca1c7979dadbca125b125857401",
+                    "0x60f69c6a430f6e36adaf08f69e7f7ee18c06cfb119107748775bb6c7b8d8275c",
+                    "0x9ebb6fb2f294d48fd19f09a00fc7932c97b70466a7d0aa13cffb9af02a534f46",
+                    "0xbf9ac74777a0b62021e6972d736c00f86c9436540df0703ff816692261edf3a0",
+                    "0x63aa4ef5b2812eb9baede2ac5270ec0a57908a1ad3bb8b3611b07ca869c4d303",
+                    "0xed560193fb4ef4f4f29b169c1c93ed9e8b793a603e42a24f8c8f4cadde888d76",
+                    "0x5627f9244278cd8e2f3d2c4e0f0edc200aef885a6a8c52c42232976eb200a3d9",
+                    "0xaa88e2d2f952b4957330ddcc488fe891f1e7159019cb20a69e0486d8715fc126",
+                    "0xbc4c1069744229585c1624f63fa8670503550c9561b28ae38b9ba891dd825841",
+                    "0xdc44871fd0cffabdccdf3715a06cc4d7f8d01b9ec9c8c6b0f05161a9a5f72eb1",
+                    "0x9c7b5c6a7039e36c9a477f2f0c7772c368558905963b2f6b4cfe75d5c4bc214d",
+                    "0xdf52e3021bfa655608ea7e86042aadd15dec11bc63583f332470bfb306ac1b56",
+                    "0x06dc861e41ae7abe6dbf807be0b35f83f4c38c17509263cbcab19753504ea693",
+                    "0x83a1e7d50724cb569e54a0633d4f82d83ba5f3985a2593c6cbfba32b464e79ac"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/wallet/{owner}/tokens": {
+      "get": {
+        "tags": [
+          "Wallet"
+        ],
+        "summary": "Get all tokens",
+        "description": "Returns all tokens owned by the specified wallet",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ownerParam"
+          },
+          {
+            "$ref": "#/components/parameters/includeMetadataParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/WalletTokenListResponse"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidOwnerError"
+          }
+        }
+      }
+    },
+    "/wallet/{owner}/tokens/{tokenAddress}": {
+      "get": {
+        "tags": [
+          "Wallet"
+        ],
+        "summary": "Get collection tokens",
+        "description": "Returns all tokens owned by the specified wallet for a specific token address",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ownerParam"
+          },
+          {
+            "$ref": "#/components/parameters/tokenAddressParam"
+          },
+          {
+            "$ref": "#/components/parameters/includeMetadataParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/WalletTokenListResponse"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidOwnerOrTokenAddressError"
+          }
+        }
+      }
+    },
+    "/wallet/{owner}/tokens/{tokenAddress}/{tokenId}": {
+      "get": {
+        "tags": [
+          "Wallet"
+        ],
+        "summary": "Get token",
+        "description": "Returns a specific token owned by the specified wallet",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ownerParam"
+          },
+          {
+            "$ref": "#/components/parameters/tokenAddressParam"
+          },
+          {
+            "$ref": "#/components/parameters/tokenIdParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/WalletTokenResponse"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidOwnerOrTokenAddressError"
+          }
+        }
+      }
+    },
+    "/wallet/{owner}/tokens/{tokenAddress}/token-ids": {
+      "get": {
+        "tags": [
+          "Wallet"
+        ],
+        "summary": "Get collection token IDs",
+        "description": "Returns all token IDs owned by the specified wallet for a specific token address",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ownerParam"
+          },
+          {
+            "$ref": "#/components/parameters/tokenAddressParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/TokenIdListResponse"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidOwnerOrTokenAddressError"
+          }
+        }
+      }
+    },
+    "/wallet/{owner}/listings": {
+      "get": {
+        "tags": [
+          "Wallet"
+        ],
+        "summary": "Get listings",
+        "description": "Returns all listings made by the specified wallet",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ownerParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/ListingListResponse"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidOwnerError"
+          }
+        }
+      }
+    },
+    "/wallet/{owner}/offers-made": {
+      "get": {
+        "tags": [
+          "Wallet"
+        ],
+        "summary": "Get offers made",
+        "description": "Returns all offers made by the specified wallet",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ownerParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OfferListResponse"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidOwnerError"
+          }
+        }
+      }
+    },
+    "/wallet/{owner}/offers-received": {
+      "get": {
+        "tags": [
+          "Wallet"
+        ],
+        "summary": "Get offers received",
+        "description": "Returns all offers made on tokens owned by the specified wallet",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ownerParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OfferListResponse"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidOwnerError"
+          }
+        }
+      }
+    },
+    "/wallet/{owner}/freezes": {
+      "get": {
+        "tags": [
+          "Wallet"
+        ],
+        "summary": "Get wallet token freezes",
+        "description": "Returns all token freezes for a wallet",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ownerParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of token freezes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FreezeRow"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidOwnerError"
+          }
+        }
+      }
+    },
+    "/wallet/{owner}/activity": {
+      "get": {
+        "tags": [
+          "Wallet"
+        ],
+        "summary": "Get wallet marketplace activity",
+        "description": "Returns marketplace activity where the wallet is either the maker or taker",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ownerParam"
+          },
+          {
+            "$ref": "#/components/parameters/perPageParam"
+          },
+          {
+            "$ref": "#/components/parameters/pageParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/ActivityListResponse"
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/responses/InvalidOwnerError"
+                    },
+                    {
+                      "$ref": "#/components/responses/InvalidPerPageError"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "ownerParam": {
+        "in": "path",
+        "name": "owner",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "pattern": "^0x[a-fA-F0-9]{40}$"
+        },
+        "description": "Wallet address of the token owner",
+        "example": "0xc0de00000dE60f7F19C70311982e74c854E0ef6C"
+      },
+      "tokenAddressParam": {
+        "in": "path",
+        "name": "tokenAddress",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "pattern": "^0x[a-fA-F0-9]{40}$"
+        },
+        "description": "Address of the token contract",
+        "example": "0xabcdef0123456789abcdef0123456789abcdef01"
+      },
+      "tokenIdParam": {
+        "in": "path",
+        "name": "tokenId",
+        "required": true,
+        "schema": {
+          "type": "integer"
+        },
+        "description": "ID of the specific token",
+        "example": 1
+      },
+      "attributesParam": {
+        "in": "query",
+        "name": "attributes[{trait_type}]",
+        "required": false,
+        "schema": {
+          "type": "string"
+        },
+        "style": "form",
+        "explode": true,
+        "description": "Filter tokens by trait attributes. Multiple attributes can be specified using different trait types.",
+        "example": {
+          "attributes[background]": "blue",
+          "attributes[eyes]": "green"
+        }
+      },
+      "includeMetadataParam": {
+        "in": "query",
+        "name": "includeMetadata",
+        "required": false,
+        "schema": {
+          "type": "boolean",
+          "default": false
+        },
+        "description": "Include token metadata in the response",
+        "example": true
+      },
+      "perPageParam": {
+        "in": "query",
+        "name": "perPage",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "default": 1000
+        },
+        "description": "Number of items per page",
+        "example": 100
+      },
+      "pageParam": {
+        "in": "query",
+        "name": "page",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "default": 1
+        },
+        "description": "Page number",
+        "example": 1
+      }
+    },
+    "responses": {
+      "InvalidTokenAddressError": {
+        "description": "Invalid token address",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "invalidTokenAddress": {
+                "$ref": "#/components/examples/invalidTokenAddressError"
+              }
+            }
+          }
+        }
+      },
+      "InvalidOwnerError": {
+        "description": "Invalid owner",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "invalidOwner": {
+                "$ref": "#/components/examples/invalidOwnerError"
+              }
+            }
+          }
+        }
+      },
+      "InvalidPerPageError": {
+        "description": "Invalid per page",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "invalidPerPage": {
+                "$ref": "#/components/examples/invalidPerPageError"
+              }
+            }
+          }
+        }
+      },
+      "InvalidOwnerOrTokenAddressError": {
+        "description": "Invalid owner or token address",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "invalidOwner": {
+                "$ref": "#/components/examples/invalidOwnerError"
+              },
+              "invalidTokenAddress": {
+                "$ref": "#/components/examples/invalidTokenAddressError"
+              }
+            }
+          }
+        }
+      },
+      "TokenBalanceListResponse": {
+        "description": "List of token balances",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/BalanceRow"
+              }
+            }
+          }
+        }
+      },
+      "TokenBalanceRowResponse": {
+        "description": "A single token balance",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/BalanceRow"
+            }
+          }
+        }
+      },
+      "TokenIdListResponse": {
+        "description": "List of token IDs",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/TokenIdRows"
+            }
+          }
+        }
+      },
+      "TokenListResponse": {
+        "description": "List of tokens",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/TokenRow"
+              }
+            }
+          }
+        }
+      },
+      "TokenRowResponse": {
+        "description": "A single token",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/TokenRow"
+            }
+          }
+        }
+      },
+      "ListingListResponse": {
+        "description": "List of token listings",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/ListingRow"
+              }
+            }
+          }
+        }
+      },
+      "ListingRowResponse": {
+        "description": "A single token listing",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ListingRow"
+            }
+          }
+        }
+      },
+      "OfferListResponse": {
+        "description": "List of token offers",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/OfferRow"
+              }
+            }
+          }
+        }
+      },
+      "HolderListResponse": {
+        "description": "List of token holders",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/HolderRow"
+              }
+            }
+          }
+        }
+      },
+      "MinterListResponse": {
+        "description": "List of token minters",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/MinterRow"
+              }
+            }
+          }
+        }
+      },
+      "StatsResponse": {
+        "description": "Stats for a collection",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Stats"
+            }
+          }
+        }
+      },
+      "ActivityListResponse": {
+        "description": "List of marketplace activity",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/ActivityRow"
+              }
+            }
+          }
+        }
+      },
+      "WalletTokenListResponse": {
+        "description": "List of tokens owned by a wallet",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/WalletTokenRow"
+              }
+            }
+          }
+        }
+      },
+      "WalletTokenResponse": {
+        "description": "A single token owned by a wallet",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/WalletTokenRow"
+            }
+          }
+        }
+      }
+    },
+    "examples": {
+      "invalidOwnerError": {
+        "value": {
+          "error": "Invalid owner"
+        }
+      },
+      "invalidTokenAddressError": {
+        "value": {
+          "error": "Invalid token address"
+        }
+      },
+      "invalidPerPageError": {
+        "value": {
+          "error": "Per page cannot be greater than 1000"
+        }
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Error message"
+          }
+        }
+      },
+      "Stats": {
+        "type": "object",
+        "properties": {
+          "numMinted": {
+            "type": "number",
+            "description": "Number of tokens minted"
+          },
+          "totalSupply": {
+            "type": "number",
+            "description": "Total supply"
+          },
+          "primaryVolume": {
+            "type": "number",
+            "description": "Primary volume"
+          },
+          "totalSalesQty": {
+            "type": "number",
+            "description": "Total sales quantity"
+          },
+          "totalSalesVolume": {
+            "type": "number",
+            "description": "Total sales volume"
+          },
+          "maxSalePrice": {
+            "type": "number",
+            "description": "Maximum sale price"
+          },
+          "minSalePrice": {
+            "type": "number",
+            "description": "Minimum sale price"
+          },
+          "avgSalePrice": {
+            "type": "number",
+            "description": "Average sale price"
+          },
+          "floorPrice": {
+            "type": "number",
+            "description": "Floor price"
+          },
+          "numListed": {
+            "type": "number",
+            "description": "Number of listings"
+          },
+          "bestOffer": {
+            "type": "number",
+            "description": "Best offer"
+          },
+          "numOffers": {
+            "type": "number",
+            "description": "Number of offers"
+          },
+          "holders": {
+            "type": "number",
+            "description": "Number of holders"
+          }
+        }
+      },
+      "ActivityRow": {
+        "type": "object",
+        "properties": {
+          "event": {
+            "type": "string",
+            "enum": [
+              "MAKE",
+              "CANCEL",
+              "TAKE"
+            ],
+            "description": "Type of activity event"
+          },
+          "orderType": {
+            "type": "string",
+            "enum": [
+              "BUY",
+              "SELL"
+            ],
+            "description": "Type of order"
+          },
+          "timestamp": {
+            "type": "integer",
+            "description": "Unix timestamp of the event"
+          },
+          "block": {
+            "type": "integer",
+            "description": "Block number when event occurred"
+          },
+          "txhash": {
+            "type": "string",
+            "pattern": "^0x[a-fA-F0-9]{64}$",
+            "description": "Transaction hash"
+          },
+          "maker": {
+            "type": "string",
+            "pattern": "^0x[a-fA-F0-9]{40}$",
+            "description": "Address of the maker"
+          },
+          "taker": {
+            "type": "string",
+            "pattern": "^0x[a-fA-F0-9]{40}$",
+            "description": "Address of the taker"
+          },
+          "tokenAddress": {
+            "type": "string",
+            "pattern": "^0x[a-fA-F0-9]{40}$",
+            "description": "Contract address of the token"
+          },
+          "tokenId": {
+            "type": "string",
+            "description": "ID of the token"
+          },
+          "tokenMetadata": {
+            "$ref": "#/components/schemas/SimpleMetadata"
+          },
+          "qty": {
+            "type": "number",
+            "description": "Quantity involved in the activity"
+          },
+          "price": {
+            "type": "number",
+            "description": "Price per token in TIA"
+          },
+          "isCollectionOrder": {
+            "type": "boolean",
+            "description": "Whether the order is a collection order"
+          }
+        }
+      },
+      "HolderRow": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "pattern": "^0x[a-fA-F0-9]{40}$",
+            "description": "Wallet address of the token owner",
+            "example": "0xc0de00000dE60f7F19C70311982e74c854E0ef6C"
+          },
+          "tokenAddress": {
+            "type": "string",
+            "pattern": "^0x[a-fA-F0-9]{40}$",
+            "description": "Contract address of the token",
+            "example": "0xabcdef0123456789abcdef0123456789abcdef01"
+          },
+          "tokenId": {
+            "type": "string",
+            "description": "ID of the token",
+            "example": "1"
+          },
+          "balance": {
+            "type": "string",
+            "description": "Token balance",
+            "example": "10"
+          },
+          "frozenBalance": {
+            "type": "string",
+            "description": "Token frozen balance",
+            "example": "1"
+          }
+        }
+      },
+      "Metadata": {
+        "type": "object",
+        "additionalProperties": true,
+        "description": "Metadata for the token",
+        "example": {
+          "name": "Mammoth #1",
+          "description": "It's widely believed that the last woolly mammoths went extinct 9,999 years ago. In fact, they've continued to live, unseen, in the background of human history, bearing witness to its horrors, its triumphs, and its folly. They were present at Golgotha. They were there on the grassy knoll. They've watched the toppling of tyrants and the fast-changing fortunes of empires. Quietly, mammoths observe, withholding judgment, wanting nothing other than to fit in.",
+          "image": "ipfs://bafybeihmfp45w4p3bk7vzekixhxsdrsyvtgs7gtiaestdcwoxrsts36e6u",
+          "tags": [
+            "modularium",
+            "mammoth"
+          ]
+        }
+      },
+      "SimpleMetadata": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name of the token",
+            "example": "Mammoth #1"
+          },
+          "image": {
+            "type": "string",
+            "description": "Full resolution image URL",
+            "example": "ipfs://bafybeihmfp45w4p3bk7vzekixhxsdrsyvtgs7gtiaestdcwoxrsts36e6u"
+          },
+          "thumbnail": {
+            "type": "string",
+            "description": "Thumbnail image URL",
+            "example": "ipfs://bafybeihmfp45w4p3bk7vzekixhxsdrsyvtgs7gtiaestdcwoxrsts36e6u"
+          }
+        }
+      },
+      "BalanceRow": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "pattern": "^0x[a-fA-F0-9]{40}$",
+            "description": "Wallet address of the token owner",
+            "example": "0xc0de00000dE60f7F19C70311982e74c854E0ef6C"
+          },
+          "tokenAddress": {
+            "type": "string",
+            "pattern": "^0x[a-fA-F0-9]{40}$",
+            "description": "Contract address of the token",
+            "example": "0xabcdef0123456789abcdef0123456789abcdef01"
+          },
+          "tokenId": {
+            "type": "string",
+            "description": "ID of the token",
+            "example": "1"
+          },
+          "balance": {
+            "type": "string",
+            "description": "Token balance",
+            "example": "10"
+          },
+          "frozenBalance": {
+            "type": "string",
+            "description": "Token frozen balance",
+            "example": "1"
+          }
+        }
+      },
+      "WalletTokenRow": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/BalanceRow"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "tokenMetadata": {
+                "$ref": "#/components/schemas/Metadata"
+              }
+            }
+          }
+        ]
+      },
+      "TokenIdRows": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Array of token IDs",
+        "example": [
+          "1",
+          "2",
+          "3"
+        ]
+      },
+      "TokenType": {
+        "type": "string",
+        "enum": [
+          "ERC721",
+          "ERC1155"
+        ],
+        "description": "Type of the token"
+      },
+      "TokenRow": {
+        "type": "object",
+        "properties": {
+          "tokenAddress": {
+            "type": "string",
+            "pattern": "^0x[a-fA-F0-9]{40}$",
+            "description": "Contract address of the token",
+            "example": "0xabcdef0123456789abcdef0123456789abcdef01"
+          },
+          "tokenId": {
+            "type": "string",
+            "description": "ID of the token",
+            "example": "1"
+          },
+          "tokenType": {
+            "$ref": "#/components/schemas/TokenType"
+          },
+          "totalSupply": {
+            "type": "string",
+            "description": "Total supply of the token",
+            "example": "1"
+          },
+          "isMarketplaceAllowed": {
+            "type": "boolean",
+            "description": "Whether the token is allowed to be traded on the Modularium marketplace",
+            "example": true
+          },
+          "tokenMetadata": {
+            "$ref": "#/components/schemas/Metadata"
+          }
+        }
+      },
+      "ListingRow": {
+        "type": "object",
+        "properties": {
+          "orderId": {
+            "type": "string",
+            "description": "ID of the order",
+            "example": "1"
+          },
+          "tokenAddress": {
+            "type": "string",
+            "pattern": "^0x[a-fA-F0-9]{40}$",
+            "description": "Contract address of the token",
+            "example": "0xabcdef0123456789abcdef0123456789abcdef01"
+          },
+          "tokenId": {
+            "type": "string",
+            "description": "ID of the token",
+            "example": "1"
+          },
+          "tokenMetadata": {
+            "$ref": "#/components/schemas/SimpleMetadata"
+          },
+          "price": {
+            "type": "number",
+            "description": "Price per token in TIA",
+            "example": 3.75
+          },
+          "priceAtia": {
+            "type": "string",
+            "description": "Price per token in atia",
+            "example": "3750000000000000000"
+          },
+          "qty": {
+            "type": "number",
+            "description": "Quantity of the order",
+            "example": 1
+          },
+          "filled": {
+            "type": "number",
+            "description": "Quantity that has been filled",
+            "example": 0
+          },
+          "makerBalance": {
+            "type": "number",
+            "description": "Available balance of the order maker",
+            "example": 10
+          },
+          "maker": {
+            "type": "string",
+            "pattern": "^0x[a-fA-F0-9]{40}$",
+            "description": "Address of the order maker",
+            "example": "0xc0de00000dE60f7F19C70311982e74c854E0ef6C"
+          },
+          "recipient": {
+            "type": "string",
+            "pattern": "^0x[a-fA-F0-9]{40}$",
+            "description": "Address of the recipient if the order is taken",
+            "example": "0xc0de00000dE60f7F19C70311982e74c854E0ef6C"
+          },
+          "validFrom": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 date-time when the listing is valid from"
+          },
+          "validUntil": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 date-time when the listing is valid until"
+          }
+        }
+      },
+      "OfferRow": {
+        "type": "object",
+        "properties": {
+          "orderId": {
+            "type": "string",
+            "description": "ID of the order",
+            "example": "1"
+          },
+          "tokenAddress": {
+            "type": "string",
+            "pattern": "^0x[a-fA-F0-9]{40}$",
+            "description": "Contract address of the token",
+            "example": "0xabcdef0123456789abcdef0123456789abcdef01"
+          },
+          "tokenId": {
+            "type": "string",
+            "description": "ID of the token",
+            "example": "1"
+          },
+          "tokenMetadata": {
+            "$ref": "#/components/schemas/SimpleMetadata"
+          },
+          "price": {
+            "type": "number",
+            "description": "Price per token in TIA",
+            "example": 3.75
+          },
+          "qty": {
+            "type": "number",
+            "description": "Quantity of the order",
+            "example": 1
+          },
+          "filled": {
+            "type": "number",
+            "description": "Quantity that has been filled",
+            "example": 0
+          },
+          "maker": {
+            "type": "string",
+            "pattern": "^0x[a-fA-F0-9]{40}$",
+            "description": "Address of the order maker",
+            "example": "0xc0de00000dE60f7F19C70311982e74c854E0ef6C"
+          },
+          "recipient": {
+            "type": "string",
+            "pattern": "^0x[a-fA-F0-9]{40}$",
+            "description": "Address of the recipient if the order is taken",
+            "example": "0xc0de00000dE60f7F19C70311982e74c854E0ef6C"
+          },
+          "validFrom": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 date-time when the listing is valid from"
+          },
+          "validUntil": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 date-time when the listing is valid until"
+          },
+          "isCollectionOffer": {
+            "type": "boolean",
+            "description": "Whether the offer is a collection offer"
+          }
+        }
+      },
+      "MinterRow": {
+        "type": "object",
+        "properties": {
+          "minter": {
+            "type": "string",
+            "description": "Wallet address of the minter",
+            "example": "0xc0de00000dE60f7F19C70311982e74c854E0ef6C"
+          },
+          "tokenAddress": {
+            "type": "string",
+            "description": "Token contract address",
+            "example": "0xabcdef0123456789abcdef0123456789abcdef01"
+          },
+          "tokenId": {
+            "type": "string",
+            "description": "Token ID",
+            "example": "1"
+          },
+          "minted": {
+            "type": "string",
+            "description": "Number of tokens minted",
+            "example": "10"
+          }
+        }
+      },
+      "FreezeRow": {
+        "type": "object",
+        "properties": {
+          "recordId": {
+            "type": "string",
+            "description": "ID of the freeze record",
+            "example": "1"
+          },
+          "tokenAddress": {
+            "type": "string",
+            "description": "Contract address of the token",
+            "example": "0xabcdef0123456789abcdef0123456789abcdef01"
+          },
+          "tokenId": {
+            "type": "string",
+            "description": "ID of the token",
+            "example": "1"
+          },
+          "tokenMetadata": {
+            "$ref": "#/components/schemas/SimpleMetadata"
+          },
+          "amount": {
+            "type": "string",
+            "description": "Amount of tokens frozen",
+            "example": "10"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 date-time when the freeze expires"
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Collection",
+      "description": "Endpoints for retrieving collection-wide and token-specific data including metadata, stats, holders, listings, offers, and marketplace activity."
+    },
+    {
+      "name": "Wallet",
+      "description": "Endpoints for querying wallet-specific data including token ownership, balances, and transaction history"
+    },
+    {
+      "name": "Balances",
+      "description": "Endpoints for retrieving token balances and ownership information across collections"
+    },
+    {
+      "name": "Merkle Proofs",
+      "description": "Endpoints for obtaining merkle proofs"
+    }
+  ]
+}

@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zroop NFT Interface</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/viem@1.19.1/dist/viem.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--tg-theme-bg-color, #1E1E1E);
+            color: var(--tg-theme-text-color, #FFFFFF);
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .nft-interface {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .button {
+            background: var(--tg-theme-button-color, #2481CC);
+            color: var(--tg-theme-button-text-color, #FFFFFF);
+            border: none;
+            border-radius: 8px;
+            padding: 12px 24px;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        .button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .error {
+            color: #ff4444;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Zroop NFT Interface</h1>
+        </div>
+
+        <div class="nft-interface">
+            <button id="connectWallet" class="button">Connect Wallet</button>
+            <button id="mintNFT" class="button" disabled>Mint NFT</button>
+            <button id="viewFiles" class="button" disabled>View Files</button>
+            
+            <div id="status" class="status" style="display: none;">
+                <p>Wallet: <span id="walletAddress">-</span></p>
+                <p>NFT Balance: <span id="nftBalance">-</span></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+
+        let walletAddress = null;
+        let provider = null;
+        let contract = null;
+        let telegramId = null;
+
+        // Get Telegram ID from URL params
+        const urlParams = new URLSearchParams(window.location.search);
+        telegramId = urlParams.get('telegramId');
+
+        if (!telegramId) {
+            tg.showAlert('No Telegram ID provided');
+        }
+
+        // Get config from backend
+        async function getConfig() {
+            try {
+                const response = await fetch(`${window.location.origin}/config`);
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                tg.showAlert('Error getting config: ' + error.message);
+                throw error;
+            }
+        }
+
+        // Initialize viem
+        async function initializeClient() {
+            const config = await getConfig();
+            return viem.createPublicClient({
+                chain: {
+                    id: 984122,
+                    name: 'Forma Mainnet',
+                    network: 'forma',
+                    nativeCurrency: {
+                        decimals: 18,
+                        name: 'TIA',
+                        symbol: 'TIA',
+                    },
+                    rpcUrls: {
+                        default: { http: [config.formaRpc] },
+                        public: { http: [config.formaRpc] }
+                    },
+                    blockExplorers: {
+                        default: { url: 'https://explorer.forma.art' }
+                    },
+                    fees: {
+                        minGasPrice: '18000000000' // 18 nTIA
+                    }
+                },
+                transport: viem.http()
+            });
+        }
+
+        let client;
+        (async () => {
+            client = await initializeClient();
+        })();
+
+        // Connect wallet
+        document.getElementById('connectWallet').addEventListener('click', async () => {
+            try {
+                if (typeof window.ethereum !== 'undefined') {
+                    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    walletAddress = accounts[0];
+                    document.getElementById('walletAddress').textContent = walletAddress;
+                    document.getElementById('status').style.display = 'block';
+                    
+                    // Sign message after connecting
+                    await signMessage();
+                    
+                    // Check NFT ownership
+                    const hasNFT = await checkNFTOwnership(walletAddress);
+                    
+                    if (hasNFT) {
+                        document.getElementById('mintNFT').disabled = false;
+                        document.getElementById('viewFiles').disabled = false;
+                        updateStatus();
+                    } else {
+                        tg.showAlert('You need to own an NFT to use this interface');
+                    }
+                } else {
+                    tg.showAlert('Please install MetaMask or another Web3 wallet');
+                }
+            } catch (error) {
+                tg.showAlert('Error connecting wallet: ' + error.message);
+            }
+        });
+
+        // Sign message and link wallet
+        async function signMessage() {
+            try {
+                const config = await getConfig();
+                const message = `Link wallet to ZroopBot: ${telegramId}`;
+                const signature = await window.ethereum.request({
+                    method: 'personal_sign',
+                    params: [message, walletAddress]
+                });
+                
+                // Send to backend
+                const response = await fetch(`${config.apiUrl}/link-wallet`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        walletAddress,
+                        telegramId,
+                        signature
+                    })
+                });
+                
+                const data = await response.json();
+                if (!data.success) {
+                    throw new Error(data.error || 'Failed to link wallet');
+                }
+                
+                tg.showAlert('Wallet linked successfully!');
+            } catch (error) {
+                tg.showAlert('Error signing message: ' + error.message);
+                throw error;
+            }
+        }
+
+        // Mint NFT
+        document.getElementById('mintNFT').addEventListener('click', async () => {
+            try {
+                const contract = await getContract();
+                const { hash } = await contract.write.mint();
+                tg.showAlert(`Mint transaction sent! Hash: ${hash}`);
+                
+                // Disable mint button temporarily
+                document.getElementById('mintNFT').disabled = true;
+                setTimeout(() => {
+                    updateStatus();
+                    document.getElementById('mintNFT').disabled = false;
+                }, 5000);
+            } catch (error) {
+                tg.showAlert('Error minting NFT: ' + error.message);
+            }
+        });
+
+        // View files
+        document.getElementById('viewFiles').addEventListener('click', async () => {
+            try {
+                const contract = await getContract();
+                const files = await contract.read.listFiles();
+                displayFiles(files);
+            } catch (error) {
+                tg.showAlert('Error getting files: ' + error.message);
+            }
+        });
+
+        // Helper functions
+        async function checkNFTOwnership(address) {
+            const contract = await getContract();
+            const balance = await contract.read.balanceOf([address]);
+            return balance > 0;
+        }
+
+        async function getContract() {
+            if (!contract) {
+                const config = await getConfig();
+                const client = viem.createPublicClient({
+                    chain: {
+                        id: 984122,
+                        name: 'Forma',
+                        network: 'forma',
+                        nativeCurrency: {
+                            decimals: 18,
+                            name: 'TIA',
+                            symbol: 'TIA',
+                        },
+                        rpcUrls: {
+                            default: { http: [config.formaRpc] },
+                            public: { http: [config.formaRpc] },
+                        },
+                    },
+                    transport: viem.http()
+                });
+
+                const contractAddress = config.contractAddress;
+                contract = viem.getContract({
+                    address: contractAddress,
+                    abi: [
+                        {
+                            "inputs": [
+                                {
+                                    "internalType": "address",
+                                    "name": "owner",
+                                    "type": "address"
+                                }
+                            ],
+                            "name": "balanceOf",
+                            "outputs": [
+                                {
+                                    "internalType": "uint256",
+                                    "name": "",
+                                    "type": "uint256"
+                                }
+                            ],
+                            "stateMutability": "view",
+                            "type": "function"
+                        },
+                        {
+                            "inputs": [
+                                {
+                                    "internalType": "uint256",
+                                    "name": "tokenId",
+                                    "type": "uint256"
+                                }
+                            ],
+                            "name": "ownerOf",
+                            "outputs": [
+                                {
+                                    "internalType": "address",
+                                    "name": "",
+                                    "type": "address"
+                                }
+                            ],
+                            "stateMutability": "view",
+                            "type": "function"
+                        },
+                        {
+                            "inputs": [],
+                            "name": "mint",
+                            "outputs": [],
+                            "stateMutability": "nonpayable",
+                            "type": "function"
+                        },
+                        {
+                            "inputs": [],
+                            "name": "totalSupply",
+                            "outputs": [
+                                {
+                                    "internalType": "uint256",
+                                    "name": "",
+                                    "type": "uint256"
+                                }
+                            ],
+                            "stateMutability": "view",
+                            "type": "function"
+                        },
+                        {
+                            "inputs": [],
+                            "name": "listFiles",
+                            "outputs": [
+                                {
+                                    "internalType": "string[]",
+                                    "name": "",
+                                    "type": "string[]"
+                                }
+                            ],
+                            "stateMutability": "view",
+                            "type": "function"
+                        }
+                    ],
+                    client,
+                    defaultConfig: {
+                        gas: undefined,
+                        gasPrice: '18000000000',
+                        maxFeePerGas: undefined,
+                        maxPriorityFeePerGas: undefined
+                    }
+                });
+            }
+            return contract;
+        }
+
+        async function updateStatus() {
+            if (walletAddress) {
+                document.getElementById('walletAddress').textContent = walletAddress;
+                const balance = await checkNFTOwnership(walletAddress);
+                document.getElementById('nftBalance').textContent = balance ? '1' : '0';
+                document.getElementById('status').style.display = 'block';
+            }
+        }
+
+        function displayFiles(files) {
+            // Create and show file list
+            const fileList = files.map(file => `<div>${file}</div>`).join('');
+            tg.showPopup({
+                title: 'Available Files',
+                message: fileList,
+                buttons: [{ type: 'close' }]
+            });
+        }
+    </script>
+</body>
+</html>
