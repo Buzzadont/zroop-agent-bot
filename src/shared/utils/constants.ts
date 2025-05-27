@@ -73,7 +73,7 @@ export const WEBAPP_CONFIG = {
 };
 
 // Alert Processor Configuration
-export const ALERT_PROCESSOR_POLLING_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+export const ALERT_PROCESSOR_POLLING_INTERVAL_MS = 3 * 60 * 1000; // 5 minutes
 export const ALERT_PROCESSOR_NOTIFICATION_COOLDOWN_MS = 15 * 60 * 1000; // 15 minutes 
 
 // Admin IDs for special access (e.g., dev mode in WebApp)
