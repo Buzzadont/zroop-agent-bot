@@ -36,7 +36,7 @@ another = "Yo!"
 │   │   │   ├── proofVerificationService.ts # Manages and processes proof_tasks lifecycle
 │   │   │   ├── NftMetadataService.ts # Fetches and parses NFT metadata from on-chain (tokenURI/uri)
 │   │   │   ├── alertService.ts   # Manages alert subscriptions CRUD and sending notifications
-│   │   │   ├── AlertProcessorService.ts # Periodically checks alert conditions (currently every 10 minutes) and triggers notifications
+│   │   │   ├── AlertProcessorService.ts # Periodically checks alert conditions and triggers notifications
 │   │   │   ├── profileService.ts # Aggregates data for user profiles
 │   │   │   └── housekeepingService.ts # Performs periodic cleanup tasks (e.g., old proof_tasks)
 │   │   ├── utils/              # Backend utilities
@@ -52,18 +52,23 @@ another = "Yo!"
 │   │       ├── crypto.ts       # Cryptographic functions (hashing, encryption)
 │   │       └── modularium-queries.ts # GraphQL queries for Modularium API
 │   └── index.ts                # Main entry point (spawns backend and bot processes)
-├── dist/                       # Compiled JavaScript code
+├── dist/                       # Compiled JavaScript code (output of `pnpm run build`)
 ├── frontend/                   # Terminal web interface (WebApp)
 │   └── templates/              # HTML templates (e.g., interface.html)
 │       └── interface.html      # Main WebApp interface
 ├── tests/                      # Automated tests (e.g., using Jest)
-├── db/                         # SQLite database directory
-│   └── zroop.db                # Database file
+├── db/                         # SQLite database directory (ensure .gitkeep is present if dir is empty)
+│   └── .gitkeep                # Placeholder to keep the directory in git
 ├── certs/                      # SSL certificates (if used, e.g., for local HTTPS)
-├── logs/                       # Application logs
+├── logs/                       # Application logs (gitignored)
 ├── .env                        # Environment variables (gitignored)
 ├── .env.example                # Example environment variables
+├── Dockerfile                  # Defines the Docker image build process
+├── .dockerignore               # Specifies files to exclude from Docker build context
+├── ecosystem.config.js         # PM2 configuration for running apps in Docker
 ├── package.json                # Project dependencies and scripts
+├── pnpm-lock.yaml              # Exact versions of dependencies for pnpm
+├── nodemon.json                # Configuration for nodemon (used by `pnpm run dev`)
 └── tsconfig.json               # TypeScript compiler configuration
 ```
 
@@ -99,46 +104,52 @@ another = "Yo!"
     cd zroop-agent-bot
     ```
 
-2.  Install dependencies:
+2.  **Install pnpm (if not already installed):**
     ```bash
-    npm install
+    npm install -g pnpm
     ```
 
-3.  Create a `.env` file based on the example:
+3.  Install dependencies using pnpm:
+    ```bash
+    pnpm install
+    ```
+    **Note:** After the first installation, you might need to approve build scripts for certain packages (like `better-sqlite3`, `sharp`). If prompted by pnpm, run:
+    ```bash
+    pnpm approve-builds
+    ```
+    And allow the necessary packages to build.
+
+4.  Create a `.env` file based on the example:
     ```bash
     cp .env.example .env
     # Edit .env with your settings
     ```
     Ensure all necessary variables are set, including `BOT_TOKEN`, `CHECK_WALLET`, `SALT`, `DB_PATH`, RPC URLs (`FORMA_RPC_URL`), GraphQL URLs (`FORMA_EXPLORER_GRAPHQL_URL`), marketplace API details (`MODULARIUM_API_URL`, `MODULARIUM_API_KEY`), etc.
 
-4.  Build the project:
+5.  Build the project:
     ```bash
-    npm run build
+    pnpm run build
     ```
 
 ### Running the Application
 
-#### Full launch (backend + bot via `spawn` in `index.ts`)
+The main way to run the application for development (which starts both the backend server and the Telegram bot with hot-reloading) is:
 ```bash
-npm start
+pnpm run dev
 ```
-This will run the `src/index.ts` script, which starts both the backend server and the Telegram bot as separate processes.
+This uses `nodemon` to monitor `src/` and restarts the application (via `ts-node src/index.ts`) on changes.
 
-#### Run only backend in development mode
+To run the compiled version (after `pnpm run build`):
 ```bash
-npm run backend
+pnpm start 
 ```
+This will run the `dist/index.js` script, which starts both the backend server and the Telegram bot.
 
-#### Run only bot in development mode
-```bash
-npm run bot
-```
+### Deployment with Docker (Recommended)
 
-#### Run in development mode with auto-reload (using `nodemon`)
-```bash
-npm run dev
-```
-This typically monitors changes and restarts the relevant process (backend or bot, depending on `nodemon.json` configuration).
+Docker is the recommended method for deploying the application as it provides a consistent environment. This project includes a `Dockerfile` for building the application image and an `ecosystem.config.js` for managing the backend and bot processes with PM2 inside the container.
+
+For detailed instructions on building the Docker image and running the container, please refer to the **[Developer\'s Technical Guide](TECHNICAL_IMPLEMENTATION_PLAN.md#44-deployment-with-docker-recommended)**.
 
 ## Core Flow: Wallet Linking and Proof of Ownership
 

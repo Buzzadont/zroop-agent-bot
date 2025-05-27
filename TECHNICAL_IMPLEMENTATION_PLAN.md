@@ -203,3 +203,131 @@ Integrating a new NFT marketplace primarily impacts `MarketplaceService.ts` and 
 
 ---
 This guide provides a starting point. Specific implementation details will vary based on the exact requirements of the new integration. 
+
+## 4. Project Setup, Running Locally, and Deployment
+
+This section outlines the steps to set up the project, run it locally for development, build it for production, and deploy it using Docker.
+
+### 4.1. Initial Project Setup
+
+1.  **Clone the Repository:**
+    ```bash
+    git clone <your-repository-url>
+    cd zroop-agent-bot 
+    ```
+
+2.  **Install pnpm:**
+    If you don\'t have pnpm installed globally, install it using npm:
+    ```bash
+    npm install -g pnpm
+    ```
+
+3.  **Install Dependencies:**
+    Use pnpm to install project dependencies.
+    ```bash
+    pnpm install
+    ```
+
+4.  **Approve Build Scripts (Important First Time Setup):**
+    After the initial `pnpm install`, some packages with native addons (like `better-sqlite3` and `sharp`) require their build scripts to be explicitly approved. `pnpm` will warn you about this. Run the following command and approve the necessary packages:
+    ```bash
+    pnpm approve-builds
+    ```
+    Follow the interactive prompts to allow `better-sqlite3` and `sharp` (and any others it might flag in the future) to run their build scripts. This step is crucial for these packages to compile correctly for your environment.
+
+5.  **Configure Environment Variables:**
+    Copy the `.env.example` file to `.env` and fill in the required values (Telegram Bot Token, API keys, database path, etc.).
+    ```bash
+    cp .env.example .env
+    ```
+    Then, edit `.env` with your specific configuration.
+
+### 4.2. Running Locally for Development
+
+To run the application in development mode (with hot-reloading):
+```bash
+pnpm run dev
+```
+This command uses `nodemon` to monitor changes in `src/**/*.ts` files. `nodemon` is configured via `nodemon.json` to execute `ts-node ./src/index.ts`.
+
+The `src/index.ts` script is the main entry point and is responsible for:
+*   Starting the backend Express server (defined in `src/backend/server.ts`).
+*   Starting the Telegram bot (defined in `src/bot/bot.ts`).
+
+Logs from both processes will be visible in your terminal. The backend API will typically be available at `http://localhost:3000` (or the port specified in your `.env`), and the bot will connect to Telegram.
+
+### 4.3. Building for Production
+
+To compile the TypeScript code into JavaScript for a production environment:
+```bash
+pnpm run build
+```
+This command executes `tsc` (the TypeScript compiler), which transpiles the code from the `src/` directory and outputs the JavaScript files to the `dist/` directory, according to the settings in `tsconfig.json`. 
+
+### 4.4. Deployment with Docker (Recommended)
+
+Docker is the recommended method for deploying the Zroop NFT Agent Bot as it provides a consistent and isolated environment.
+
+**Key Docker-related Files:**
+
+*   **`Dockerfile`**: This file defines the multi-stage Docker build process:
+    *   **`base` stage:** Sets up a Node.js environment (version 20-slim) and installs `pnpm` globally.
+    *   **`dependencies` stage:** Copies `package.json` and `pnpm-lock.yaml`, then installs production dependencies using `pnpm install --frozen-lockfile --prod`.
+    *   **`build` stage:** Copies the source code and `node_modules` (from the `dependencies` stage), then runs `pnpm run build` to compile TypeScript to JavaScript (output to `dist/`).
+    *   **`production` stage:** This is the final, lean image. It copies necessary artifacts from previous stages: 
+        *   `dist/` directory (compiled code) from the `build` stage.
+        *   `node_modules/` (production dependencies) from the `dependencies` stage.
+        *   `frontend/` directory (for the WebApp interface) from the `build` stage.
+        *   `package.json` (needed by PM2 and for metadata).
+        It then installs `pm2` globally, which is used as the process manager.
+    The `Dockerfile` also exposes port 3000 (or the port defined in your `.env` for the backend API) and sets the default command to run the application using PM2 and the `ecosystem.config.js` file.
+
+*   **`.dockerignore`**: This file specifies files and directories that should be excluded from the Docker build context. This helps to keep the build context small and avoid copying unnecessary files (like local `node_modules`, `.git`, log files, etc.) into the image, speeding up the build process and reducing image size.
+
+*   **`ecosystem.config.js`**: This is a PM2 configuration file. Inside the Docker container, PM2 uses this file to manage the application processes. It is configured to run two separate applications:
+    *   `zroop-backend-server`: Executes `./dist/backend/server.js` (the compiled backend API server).
+    *   `zroop-telegram-bot`: Executes `./dist/bot/bot.js` (the compiled Telegram bot).
+    This setup allows PM2 to monitor, restart, and manage these two key components of the application independently within the container.
+
+**Building the Docker Image:**
+
+Navigate to the root directory of the project (where the `Dockerfile` is located) and run:
+```bash
+docker build -t zroop-agent-bot .
+```
+Replace `zroop-agent-bot` with your preferred image name and tag (e.g., `yourusername/zroop-agent-bot:latest`).
+
+**Running the Docker Container:**
+
+Once the image is built, you can run it as a container. Here's an example command:
+```bash
+docker run -d --restart always --env-file .env -p 3000:3000 --name zroop-bot zroop-agent-bot
+```
+Let's break down this command:
+*   `docker run`: The command to create and start a new container.
+*   `-d`: Runs the container in detached mode (in the background).
+*   `--restart always`: Configures the container to restart automatically if it stops (e.g., due to an error or server reboot).
+*   `--env-file .env`: Passes all environment variables defined in your local `.env` file to the container. **Ensure your `.env` file is correctly configured for the production environment before building/running the container.**
+*   `-p 3000:3000`: Maps port 3000 on the host machine to port 3000 inside the container. If your backend API (from `server.ts` and your `.env` `PORT` variable) listens on a different port, adjust this accordingly (e.g., `-p <host_port>:<container_port>`). The Telegram bot itself does not listen on a port for incoming connections from users; it connects outbound to the Telegram API.
+*   `--name zroop-bot`: Assigns a custom name to the container for easier management (e.g., `docker logs zroop-bot`, `docker stop zroop-bot`).
+*   `zroop-agent-bot`: The name of the Docker image to use (the one you built previously).
+
+**WebApp Interface in Docker:**
+
+The `frontend/` directory, containing `templates/interface.html` and any associated assets, is copied into the Docker image during the build process. The backend server (`src/backend/server.ts`) is configured to serve these static files, so the WebApp will be accessible via the backend's URL (e.g., `http://<your_server_ip>:3000/terminal`).
+
+**Persistent Data (SQLite Database):**
+
+By default, the SQLite database file (`zroop.db` or as specified in `DB_PATH` in your `.env`) will be created *inside* the Docker container. This means if the container is removed, the database will be lost.
+
+For persistent storage, you should use Docker volumes to map the directory containing the database file from the host machine into the container. 
+
+Example: If your `.env` has `DB_PATH=./db/zroop.db`, you can map the local `db` directory:
+1.  Create a `db` directory on your host machine where you want to store the database: `mkdir -p /path/on/host/db`
+2.  Modify the `docker run` command to include a volume mount:
+    ```bash
+    docker run -d --restart always --env-file .env -p 3000:3000 -v /path/on/host/db:/usr/src/app/db --name zroop-bot zroop-agent-bot
+    ```
+    Replace `/path/on/host/db` with the actual absolute path to the directory you created on your server. The path `/usr/src/app/db` inside the container should correspond to the directory part of your `DB_PATH` environment variable (e.g., if `DB_PATH=./db/zroop.db`, then the container path is `/usr/src/app/db`; if `DB_PATH=./zroop.db`, it would be `/usr/src/app`).
+
+This ensures that the database file resides on the host system and persists even if the container is stopped, removed, or updated. 

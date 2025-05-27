@@ -1,0 +1,40 @@
+ARG NODE_VERSION=20
+
+# ---- Base Stage ----
+FROM node:${NODE_VERSION}-slim AS base
+WORKDIR /usr/src/app
+
+# Install pnpm
+RUN npm install -g pnpm
+
+# ---- Dependencies Stage ----
+FROM base AS dependencies
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile --prod
+
+# ---- Build Stage ----
+FROM base AS build
+COPY --from=dependencies /usr/src/app/node_modules ./node_modules
+COPY . .
+RUN pnpm run build
+
+# ---- Production Stage ----
+FROM base AS production
+ENV NODE_ENV=production
+
+# Copy built artifacts and production dependencies
+COPY --from=build /usr/src/app/dist ./dist
+COPY --from=dependencies /usr/src/app/node_modules ./node_modules
+COPY --from=build /usr/src/app/frontend ./frontend
+COPY package.json .
+
+# Install PM2 globally
+RUN npm install -g pm2
+
+# Expose port (if your app listens on one, e.g., for API)
+# Replace 3000 with your actual port if different
+EXPOSE 3000
+
+# Command to run the application using PM2
+# This will be defined in ecosystem.config.js
+CMD ["pm2-runtime", "ecosystem.config.js"] 
