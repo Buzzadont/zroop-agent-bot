@@ -10,3 +10,4 @@ tests/
 .cursor/
 src/backend/services/marketplaceService.ts
 src/backend/services/collection-mappings.ts
+*.tar

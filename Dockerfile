@@ -34,8 +34,11 @@ COPY --from=build /usr/src/app/dist ./dist
 COPY --from=dependencies /usr/src/app/node_modules ./node_modules
 # Copy frontend if it's served by Node.js and included in the build output directory
 COPY --from=build /usr/src/app/frontend ./frontend 
+# Copy the public folder for static assets like images
+COPY --from=build /usr/src/app/public ./public 
 COPY --from=build /usr/src/app/package.json ./package.json 
-# Needed for PM2 and metadata
+COPY ecosystem.config.js ./ecosystem.config.js 
+# Needed for PM2 to find its config
 
 # Install PM2 globally
 RUN npm install -g pm2
