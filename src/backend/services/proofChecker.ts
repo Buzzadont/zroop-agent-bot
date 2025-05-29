@@ -190,18 +190,22 @@ async function findProofTransactionGraphQL(
             const isToCorrect = toAddressLower === targetWalletLower;
             const isFromCorrect = fromAddressLower === userWalletLower;
             const isStatusOk = txNode.status === 'OK';
-            const isValueZero = txNode.value === '0.0 TIA' || txNode.value === '0' || parseFloat(txNode.value) === 0; 
+            
+            // Value check is removed - any amount is acceptable
+
             const isAfterTimestamp = blockTimestampSeconds >= afterTimestamp;
             const isBeforeDeadline = blockTimestampSeconds < deadlineTimestamp;
 
             logger.debug({
-                isToCorrect, isFromCorrect, isStatusOk, isValueZero, isAfterTimestamp, isBeforeDeadline,
+                isToCorrect, isFromCorrect, isStatusOk, 
+                isAfterTimestamp, isBeforeDeadline,
                 txFrom: fromAddressLower, userWalletLower, txTo: toAddressLower, targetWalletLower,
-                txTime: humanTime(blockTimestampSeconds), afterTime: humanTime(afterTimestamp), deadlineTime: humanTime(deadlineTimestamp)
+                txTime: humanTime(blockTimestampSeconds), afterTime: humanTime(afterTimestamp), deadlineTime: humanTime(deadlineTimestamp),
+                originalValue: txNode.value // log original value for clarity
             }, `[proofChecker] findProofTransactionGraphQL: Criteria check`);
 
-            if (isFromCorrect && isToCorrect && isStatusOk && isValueZero && isAfterTimestamp && isBeforeDeadline) {
-                logger.info({ txHash: txNode.hash, userWallet }, `[proofChecker] findProofTransactionGraphQL: SUCCESS! Found matching transaction.`);
+            if (isFromCorrect && isToCorrect && isStatusOk && isAfterTimestamp && isBeforeDeadline) {
+                logger.info({ txHash: txNode.hash, userWallet, value: txNode.value }, `[proofChecker] findProofTransactionGraphQL: SUCCESS! Found matching transaction (any amount).`);
                 result = {
                     hash: txNode.hash,
                     from: txNode.fromAddressHash,
