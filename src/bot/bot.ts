@@ -9,7 +9,7 @@ import fs from 'fs';
 // @ts-ignore
 // import { findTransaction as checkZeroTxProof } from '../backend/services/proofChecker'; // Commented out
 import { createRateLimiter, createBotBlocker, createCommandLimiter } from './anti-abuse';
-import { PROOF_TASK_DEADLINE_MINUTES } from '../shared/utils/constants'; // Added import
+import { PROOF_TASK_DEADLINE_MINUTES } from '../shared/utils/constants';
 
 const axiosInstance: AxiosInstance = axios.create({
     httpsAgent: new https.Agent({
@@ -789,7 +789,7 @@ async function initiateProofWithBackend(ctx: any, telegramId: string, wallet: st
 
 // Constants for polling behavior
 const POLLING_INTERVAL_MS = 10000; // 10 seconds
-const MAX_POLLING_DURATION_MS = 15 * 60 * 1000; // 15 minutes
+const MAX_POLLING_DURATION_MS = PROOF_TASK_DEADLINE_MINUTES * 60 * 1000; // Aligned with backend task deadline
 
 async function pollProofStatus(ctx: Context, telegramId: string, wallet: string, taskUid: string, startTimeMs: number = Date.now()) {
     //logger.debug({ telegramId, taskUid }, `[BOT] Starting pollProofStatus`);
@@ -855,7 +855,8 @@ async function pollProofStatus(ctx: Context, telegramId: string, wallet: string,
                     statusMessage = MESSAGES.PROOF_STILL_PROCESSING_POLL(wallet);
                     activePollingTimeouts[telegramId] = setTimeout(checkStatus, POLLING_INTERVAL_MS);
                     break;
-                case 'SUCCESS':
+                case 'SUCCESS': // Kept for clarity, maps to COMPLETED_SUCCESS from backend
+                case 'COMPLETED_SUCCESS':
                     logger.info({ telegramId, taskUid }, `[BOT] PollProofStatus: Task ${taskUid} (user ${telegramId}) received SUCCESS state.`);
                     delete userStates[telegramId];
                     //logger.debug(`[BOT] PollProofStatus: Attempting to send PROOF_SUCCESS message for wallet ${wallet}.`);
@@ -867,15 +868,26 @@ async function pollProofStatus(ctx: Context, telegramId: string, wallet: string,
                     
                     await handleStatus(ctx);
                     break;
-                case 'FAILED_NO_TX':
-                case 'EXPIRED':
-                case 'ERROR':
-                    logger.info({ telegramId, taskUid }, `[BOT] PollProofStatus: Task ${taskUid} (user ${telegramId}) failed or expired. Status: ${taskData.status}`);
+                case 'FAILED_NO_TX': // Kept for clarity, maps to COMPLETED_NO_TX_FOUND
+                case 'COMPLETED_NO_TX_FOUND':
+                case 'EXPIRED': // Kept for clarity, maps to EXPIRED_DEADLINE
+                case 'EXPIRED_DEADLINE':
+                case 'ERROR': // Generic error from backend
+                case 'ERROR_API_LIMIT':
+                case 'ERROR_UNKNOWN':
+                case 'FAILED_MAX_RETRIES':
+                    logger.info({ telegramId, taskUid, status: taskData.status }, `[BOT] PollProofStatus: Task ${taskUid} (user ${telegramId}) failed or expired. Status: ${taskData.status}`);
                     delete userStates[telegramId];
-                    const failureMessage = taskData.status === 'EXPIRED' ? MESSAGES.PROOF_EXPIRED_TASK(wallet) :
-                                         taskData.status === 'ERROR' ? MESSAGES.PROOF_ERROR(wallet, taskData.error_message) :
-                                         MESSAGES.PROOF_FAILED_NO_TX(wallet);
-                    await ctx.reply(failureMessage);
+                    const failureMessageKey = taskData.status.toUpperCase();
+                    let finalFailureMessage;
+                    if (failureMessageKey === 'EXPIRED' || failureMessageKey === 'EXPIRED_DEADLINE') {
+                        finalFailureMessage = MESSAGES.PROOF_EXPIRED_TASK(wallet);
+                    } else if (failureMessageKey === 'ERROR' || failureMessageKey === 'ERROR_API_LIMIT' || failureMessageKey === 'ERROR_UNKNOWN' || failureMessageKey === 'FAILED_MAX_RETRIES') {
+                        finalFailureMessage = MESSAGES.PROOF_ERROR(wallet, taskData.error_message || `Server error: ${taskData.status}`);
+                    } else { // FAILED_NO_TX or COMPLETED_NO_TX_FOUND
+                        finalFailureMessage = MESSAGES.PROOF_FAILED_NO_TX(wallet);
+                    }
+                    await ctx.reply(finalFailureMessage);
                     if (activePollingTimeouts[telegramId]) clearTimeout(activePollingTimeouts[telegramId]);
                     delete activePollingTimeouts[telegramId];
                     delete activePollingStopSignals[telegramId];
