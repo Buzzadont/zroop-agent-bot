@@ -84,7 +84,7 @@ export const ADMIN_IDS = process.env.ADMIN_IDS || '';
 export const PROOF_TASK_DEADLINE_MINUTES = 20;
 
 // Max attempts for ProofVerificationService to process a task
-export const PROOF_RETRY_LIMIT = 7;
+export const PROOF_RETRY_LIMIT = 40;
 
 // Interval for ProofVerificationService to run its processing cycle
 export const PROOF_CHECK_INTERVAL_MS = 30 * 1000;
