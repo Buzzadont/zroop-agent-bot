@@ -81,13 +81,16 @@ export const ALERT_PROCESSOR_NOTIFICATION_COOLDOWN_MS = 15 * 60 * 1000; // 15 mi
 export const ADMIN_IDS = process.env.ADMIN_IDS || '';
 
 // Default deadline for proof verification tasks in minutes
-export const PROOF_TASK_DEADLINE_MINUTES = 15; 
+export const PROOF_TASK_DEADLINE_MINUTES = 20;
 
 // Max attempts for ProofVerificationService to process a task
-export const PROOF_RETRY_LIMIT = 5; 
+export const PROOF_RETRY_LIMIT = 7;
 
 // Interval for ProofVerificationService to run its processing cycle
-export const PROOF_CHECK_INTERVAL_MS = 30 * 1000; // 30 seconds
+export const PROOF_CHECK_INTERVAL_MS = 30 * 1000;
 
 // Max attempts for a single GraphQL call within proofChecker.ts
-export const MAX_API_CALL_ATTEMPTS = 3; 
+export const MAX_API_CALL_ATTEMPTS = 5;
+
+// Max transactions to scan per user wallet for proof
+// ... existing code ... 

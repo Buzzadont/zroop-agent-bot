@@ -34,6 +34,7 @@ import { HousekeepingService } from './services/housekeepingService';
 import { hashTelegramId, decryptWallet } from '../shared/utils/crypto';
 import { alertProcessorService } from './services/AlertProcessorService';
 import { AlertType } from './services/alertService';
+import { PROOF_TASK_DEADLINE_MINUTES } from '../shared/utils/constants';
 
 // Import utility helpers
 import { wrapAsync } from '../shared/utils/express-helpers';
@@ -111,7 +112,7 @@ proofRouter.post('/initiate', wrapAsync(async (req: Request, res: Response) => {
 
         const taskUid = uuidv4();
         const afterTimestamp = Math.floor(Date.now() / 1000);
-        const checkDeadlineUtc = afterTimestamp + (15 * 60); // 15 minutes deadline
+        const checkDeadlineUtc = afterTimestamp + (PROOF_TASK_DEADLINE_MINUTES * 60); // Use constant
 
         db.createProofTask(taskUid, telegramId.toString(), normalizedWallet, afterTimestamp, checkDeadlineUtc);
         logger.debug({ taskUid, telegramId, normalizedWallet }, `[API /proof/initiate] Created proof task`);

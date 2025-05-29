@@ -119,7 +119,7 @@ async function findProofTransactionGraphQL(
         
         const query = 'query GetUserAddressTransactions($userAddress: AddressHash!, $afterCursor: String) { address(hash: $userAddress) { hash transactions(first: 10, after: $afterCursor) { edges { node { hash fromAddressHash toAddressHash value gasUsed status block { timestamp } blockNumber earliestProcessingStart } } pageInfo { hasNextPage endCursor } } } }';
         
-        const variables: { userAddress: string; targetAddress: string; afterCursor: string | null } = { userAddress: userWalletLower, targetAddress: targetWalletLower, afterCursor: nextCursor };
+        const variables: { userAddress: string; afterCursor: string | null } = { userAddress: userWalletLower, afterCursor: nextCursor };
 
         let response: AxiosResponse<GraphQLResponseData> | null = null;
 
