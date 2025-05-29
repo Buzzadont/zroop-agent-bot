@@ -79,7 +79,7 @@ const MESSAGES = {
     WALLET_INVALID: "⚠️ Invalid wallet address. Please try again.",
     WALLET_ACCEPTED_CHECKING_PROOF: (wallet: string) => `✅ Wallet address ${wallet} received.\nChecking for proof transaction... This might take a few minutes.`, // Should be immediately followed by CHECK_INSTRUCTIONS
     CHECK_INSTRUCTIONS: (checkWallet: string, wallet: string, deadlineMinutes: number) =>
-        `❗ To confirm ownership of ${wallet}, please send a 0 TIA (or any small amount) transaction to the following address:\n\n\`${checkWallet}\`\n\n⏳ You must send this transaction within the next ${deadlineMinutes} minutes. I'll keep checking. ` +
+        `❗ To confirm ownership of ${wallet}, please send a 0 TIA (or any small amount) transaction **on the Forma network** to the following address:\n\n\`${checkWallet}\`\n\n⏳ You must send this transaction within the next ${deadlineMinutes} minutes. I'll keep checking. ` +
         `I will notify you once the transaction is confirmed. `,
     PROOF_INITIATED: (wallet: string, taskUid: string) => `⏳ Proof verification initiated for ${wallet}. Task ID: ${taskUid}. I will update you on the status.`,
     PROOF_PENDING: (wallet: string) => `⏳ Proof verification for ${wallet} is pending and will be processed soon.`,

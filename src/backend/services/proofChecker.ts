@@ -5,12 +5,12 @@ import { ethers } from 'ethers';
 import dotenv from 'dotenv';
 import axios, { AxiosResponse } from 'axios';
 import logger from '../../shared/utils/logger'; // Import logger
+import { CHECK_WALLET, PROOF_CHECK_INTERVAL_MS, PROOF_RETRY_LIMIT, MAX_API_CALL_ATTEMPTS } from '../../shared/utils/constants'; // Added MAX_API_CALL_ATTEMPTS
 
 dotenv.config();
 
 // Environment variables
 const FORMA_RPC = process.env.FORMA_RPC || 'https://rpc.forma.art';
-const CHECK_WALLET = process.env.CHECK_WALLET;
 const BLOCKS_TO_CHECK = Number(process.env.BLOCKS_TO_CHECK) || 1000;
 const BLOCK_TIME = 2; // ~2 seconds per block on Forma
 const FORMA_EXPLORER_GRAPHQL_URL = process.env.FORMA_EXPLORER_GRAPHQL_URL || 'https://explorer.forma.art/graphiql';
@@ -21,6 +21,9 @@ export const provider = new ethers.JsonRpcProvider(FORMA_RPC);
 const isValidEvmAddress = (addr: string): boolean => /^0x[a-fA-F0-9]{40}$/.test(addr);
 
 const humanTime = (ts: number): string => new Date(ts * 1000).toLocaleString();
+
+// Helper function for delays
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 // Define ProofResult interface used by checkOwnershipAfter
 export interface ProofResult { // Added export to make it available for ProofVerificationService if needed, though it primarily uses it internally now.
@@ -109,22 +112,45 @@ async function findProofTransactionGraphQL(
 
     logger.debug({ userWallet, targetWallet, afterTimestamp: humanTime(afterTimestamp), deadlineTimestamp: humanTime(deadlineTimestamp) }, "[proofChecker] findProofTransactionGraphQL: Initiating search.");
 
+    let currentApiCallAttempt = 0;
+
     do {
         logger.debug({ cursor: nextCursor }, `[proofChecker] findProofTransactionGraphQL: Loop iteration.`); 
         
         const query = 'query GetUserAddressTransactions($userAddress: AddressHash!, $afterCursor: String) { address(hash: $userAddress) { hash transactions(first: 10, after: $afterCursor) { edges { node { hash fromAddressHash toAddressHash value gasUsed status block { timestamp } blockNumber earliestProcessingStart } } pageInfo { hasNextPage endCursor } } } }';
         
-        const variables = { userAddress: userWalletLower, targetAddress: targetWalletLower, afterCursor: nextCursor };
+        const variables: { userAddress: string; targetAddress: string; afterCursor: string | null } = { userAddress: userWalletLower, targetAddress: targetWalletLower, afterCursor: nextCursor };
 
-        let response: AxiosResponse<GraphQLResponseData>;
-        try {
-            response = await axios.post(FORMA_EXPLORER_GRAPHQL_URL!, { query, variables });
-        } catch (error: any) {
-            logger.error({ err: error, url: FORMA_EXPLORER_GRAPHQL_URL, responseData: error.response?.data }, '[proofChecker] findProofTransactionGraphQL: GraphQL request error:');
+        let response: AxiosResponse<GraphQLResponseData> | null = null;
+
+        while (currentApiCallAttempt < MAX_API_CALL_ATTEMPTS && !response) {
+            currentApiCallAttempt++;
+            try {
+                response = await axios.post(FORMA_EXPLORER_GRAPHQL_URL!, { query, variables });
+            } catch (error: any) {
+                logger.error({
+                    err: error,
+                    url: FORMA_EXPLORER_GRAPHQL_URL,
+                    responseData: error.response?.data,
+                    attempt: currentApiCallAttempt,
+                    maxAttempts: MAX_API_CALL_ATTEMPTS
+                }, '[proofChecker] findProofTransactionGraphQL: GraphQL request error:');
+                if (currentApiCallAttempt >= MAX_API_CALL_ATTEMPTS) {
+                    logger.error("[proofChecker] findProofTransactionGraphQL: Max API call attempts reached. Giving up on this page.");
+                    return null; // Critical error after retries, stop processing for this task
+                }
+                const delayMs = Math.pow(2, currentApiCallAttempt -1) * 1000; // 1s, 2s, 4s ...
+                logger.info(`[proofChecker] findProofTransactionGraphQL: Retrying API call in ${delayMs}ms...`);
+                await delay(delayMs);
+            }
+        }
+
+        if (!response) { // Should not happen if logic above is correct, but as a safeguard
+            logger.error('[proofChecker] findProofTransactionGraphQL: Response is null after retry loop. This indicates a bug. Returning null.');
             return null;
         }
 
-        const responseData = response.data;
+        const responseData: GraphQLResponseData = response.data;
         logger.debug({ responseData }, '[proofChecker] findProofTransactionGraphQL: Full GraphQL Response (first 100 chars of data):'); // Log snippet
 
         if (!responseData?.data?.address?.transactions?.edges) {
@@ -175,7 +201,7 @@ async function findProofTransactionGraphQL(
             }, `[proofChecker] findProofTransactionGraphQL: Criteria check`);
 
             if (isFromCorrect && isToCorrect && isStatusOk && isValueZero && isAfterTimestamp && isBeforeDeadline) {
-                logger.info({ txHash: txNode.hash, userWallet, targetWallet }, `[proofChecker] findProofTransactionGraphQL: SUCCESS! Found matching transaction.`);
+                logger.info({ txHash: txNode.hash, userWallet }, `[proofChecker] findProofTransactionGraphQL: SUCCESS! Found matching transaction.`);
                 result = {
                     hash: txNode.hash,
                     from: txNode.fromAddressHash,

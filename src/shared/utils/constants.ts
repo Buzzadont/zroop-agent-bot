@@ -82,3 +82,12 @@ export const ADMIN_IDS = process.env.ADMIN_IDS || '';
 
 // Default deadline for proof verification tasks in minutes
 export const PROOF_TASK_DEADLINE_MINUTES = 15; 
+
+// Max attempts for ProofVerificationService to process a task
+export const PROOF_RETRY_LIMIT = 5; 
+
+// Interval for ProofVerificationService to run its processing cycle
+export const PROOF_CHECK_INTERVAL_MS = 30 * 1000; // 30 seconds
+
+// Max attempts for a single GraphQL call within proofChecker.ts
+export const MAX_API_CALL_ATTEMPTS = 3; 
